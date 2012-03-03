@@ -9,16 +9,19 @@ main_code = "main = " ++ (function_code 0 0) ++ "\n"
 
 cells = 
 	(Action (0,0) "getChar" False True False None 
-	(Action (1,0) "'n'" True True False (SteppingStone (1,1) 
-										(SteppingStone (2,1)
-										(SteppingStone (3,1)
-										(SteppingStone (4,1)
-										(PathDestination (4,0))))))
-	(Action (2,0) "(==)" True True True None
-	(If (3,0)
-	(Destination (4,0) (1,0) None 
-	(Action (5,0) "putChar" False False True None End))
-	(End)))))
+	(Action (0,1) "'n'" True True False (SteppingStone (0,2)
+										(SteppingStone (1,2)
+										(SteppingStone (2,2)
+										(SteppingStone (3,2)
+										(PathDestination (3,1))))))
+	(Action (1,1) "(==)" True True True None
+	(If (2,1)
+	(Destination (3,1) (0,1) None
+	(Action (4,1) "putChar" False False True None End))
+	(Jump (3,2) (SteppingStone (3,0)
+				(SteppingStone (2,0)
+				(SteppingStone (1,0)
+				(PathDestination (0,0))))))))))
 
 main = do writeFile file_name code
 
@@ -33,7 +36,7 @@ type Return = Bool
 data Cell = Action Point String Return Push Pull Path Cell
 		  | Destination Point Origin Path Cell
 		  | If Point Then Else
-		  | Jump Path
+		  | Jump Point Path
 		  | End
 data Path = SteppingStone Point Path
 		  	   | PathDestination Point
@@ -46,6 +49,16 @@ type Point = (X, Y)
 point (Action (x,y) _ _ _ _ _ _) = (x, y)
 point (If (x,y) _ _) = (x, y)
 
+destination (SteppingStone _ path) = destination path
+destination (PathDestination point) = point
+
+values_of_scope (x_end,y_end) (Action (x_current, y_current) _ _ _ _ None next) values =
+	if x_end == x_current && y_end == y_current then []
+	else values_of_scope (x_end,y_end) next values
+	
+values_of_scope (x_end,y_end) (Action (x_current, y_current) _ _ _ _ _ next) values =
+	if x_end == x_current && y_end == y_current then []
+	else (x_current,y_current) : values_of_scope (x_end,y_end) next values
 
 point_code name_type x y = name_type++(show x)++"x"++(show y)++" "
 function_code x y = point_code "f" x y
@@ -68,6 +81,9 @@ if_body (Action (x, y) _ _ _ _ _ _) values =
 	(value_codes values)
 if_body (Destination mypoint _ _ _) values =
 	if_body (Action mypoint undefined undefined undefined undefined undefined undefined) values
+if_body (Jump mypoint _) values =
+	if_body (Action mypoint undefined undefined undefined undefined undefined undefined) values
+	
 
 body_code code preturn stack =
 	if preturn
@@ -134,9 +150,11 @@ actions_code (Destination mypoint (xo,yo) path next) values stack =
 	actions_code (Action mypoint code False True False path next) values stack
 	where code = "return "++(value_code xo yo)
 	
+actions_code (Jump (x,y) path) values stack =
+	function_header x y values stack ++
+	(function_code xd yd) ++
+	(value_codes (values_of_scope (xd,yd) cells [])) ++
+	(stack_code stack)
+	where (xd,yd) = destination path
 
 actions_code (End) _ _ = ""
-
-destinations (SteppingStone _ path) = destinations path
---destinations (PathFork _ path1 path2) = destinations path1 ++ destinations path2
-destinations (PathDestination point) = [point]
