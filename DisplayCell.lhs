@@ -13,9 +13,9 @@
 >data DisplayCell = DisplayCellCode Cell.Cell
 >                 | DisplayCellComment Grid.Comment
 >                 | DisplayCellArgument Super.Point String
->                 | DisplayCellPattern Super.Point String
+>                 | DisplayCellPattern Cell.Pattern
 >                 | DisplayCellMVarLabel Super.Point String
->                 | DisplayCellPath Super.Point
+>                 | DisplayCellPath Path.Path
 >                 | DisplayCellBlank Super.Point
 >   deriving (Show)
 
@@ -24,10 +24,10 @@
 >displayCellPoint (DisplayCellCode      cell)    = Cell.point    cell
 >displayCellPoint (DisplayCellComment   comment) = Grid.commentPoint comment
 >displayCellPoint (DisplayCellBlank     point)   = point
->displayCellPoint (DisplayCellPath      point)   = point
+>displayCellPoint (DisplayCellPath      path)    = Path.point path
 >displayCellPoint (DisplayCellArgument  point _) = point
 >displayCellPoint (DisplayCellMVarLabel point _) = point
->displayCellPoint (DisplayCellPattern   point _) = point
+>displayCellPoint (DisplayCellPattern   pattern) = Cell.patternPoint pattern
 
 
 | A sorted list of all the non blank displayCells. We'll still mesh this out with blank cells to make a complete array.
@@ -107,7 +107,6 @@ The extreme point is (3,3) but there is no content to go there.
 | 'displayCellsfromCells' not only takes all the cells and turns them into DisplayCells, but also takes all their internal paths and does the same.
 
 >displayCellsfromCells :: Cell.Cell -> [DisplayCell]
->displayCellsfromCells Cell.End{}  = []
 >displayCellsfromCells cell = (DisplayCellCode cell) :
 >   (case cell of
 
@@ -117,7 +116,7 @@ DisplayCellArguments
 
 DisplayCellPatterns
 
->       Cell.Switch{} -> map (\(Cell.Pattern patternPoint patternPattern _)-> DisplayCellPattern patternPoint patternPattern) (Cell.patterns cell)
+>       Cell.Switch{} -> map (\pattern-> DisplayCellPattern pattern) (Cell.patterns cell)
 
 DisplayCellMVarLabels
 
@@ -148,7 +147,7 @@ cellNext gives us a list, because in the case of Fork or If(Switch) we will end 
 
 >displayCellsfromPath' :: Path.Path -> [DisplayCell]
 >displayCellsfromPath' p@Path.SteppingStone{} = 
->             DisplayCellPath (Path.point p) : 
+>             DisplayCellPath p : 
 >             (displayCellsfromPath' (Path.next p))
 >displayCellsfromPath' p@Path.PathDestination{} =
 >             []

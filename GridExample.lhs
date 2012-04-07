@@ -27,8 +27,9 @@ Get a character from stdin and push it to the stack.
 
 Push 'n' to the stack.  We also carry this value down a path, just to sho we can...
 
->	(Action (0,1) "'n'" True True False (Just (SteppingStone (1,1)
->										(PathDestination (3,1))))
+>	(Action (0,1) "'n'" True True False (Just (SteppingStone (3,1)
+>                                       (SteppingStone   (3,6)
+>										(PathDestination (2,6)))))
 
 Pull the two stack items, compair them, and push the result to the stack.
 
@@ -73,12 +74,13 @@ One thread gets a character and puts it in our MVar.
 
 The other thread gets that character out of the MVar and puts it on the stack.
 
->	(TakeMVar (0,9) (-1,9) "char"
+>	(TakeMVar (-1,11) (-2,11) "char"
 
 And then "Jumps" back up to the start of our "loop" which began at the switch statement.  I know that GOTO statements are evil when it comes to textual programs.  Hopefully, I can prove to you, that in visual programming, this is very much not the case.
 
->	(Jump (0,10) (Just (SteppingStone (2,10)
->				 (PathDestination (0,1))))))]))})])))))}
+>	(Jump (-1,12) (Just (SteppingStone (0,12)
+>                (SteppingStone   (1,2)
+>				 (PathDestination (0,1)))))))]))})])))))}
 
 \end{code}
 

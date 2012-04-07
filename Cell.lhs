@@ -6,8 +6,8 @@
 Patterns are owned by switch statements.
 
 >data Pattern = Pattern {patternPoint   :: Super.Point,
->                        pattern :: String, 
->                        action  :: Cell}
+>                        pattern        :: String, 
+>                        action         :: Cell}
 >           deriving(Show,Read)
 
 
@@ -145,9 +145,9 @@ As stated earlier, we use show and read to save this to a file.
 >cellText Join{}              = "Join" 
 >cellText Jump{}              = "Jump"
 >cellText Fork{}              = "Fork"
->cellText cell@NewEmptyMVar{} = "newEmptyMVar" ++ (mvar cell)
->cellText cell@PutMVar{}      = "putMVar" ++ (mvar cell)
->cellText cell@TakeMVar{}     = "takeMVar" ++ (mvar cell)
+>cellText cell@NewEmptyMVar{} = "newEmptyMVar"
+>cellText cell@PutMVar{}      = "putMVar"
+>cellText cell@TakeMVar{}     = "takeMVar"
 >cellText End{}               = "End"
 >cellText Exit{}              = "Exit"
 
