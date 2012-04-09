@@ -236,11 +236,9 @@ I'm not sure if we should carry the stack.  But it seems like it *might* be usef
 >actionsCode (Cell.Fork p myNewThreads) top values stack =
 >   functionHeader p values stack ++
 
->   "do " ++ (forksCode (tail myNewThreads) values stack) ++
+>   "do " ++ (forksCode (myNewThreads) values stack) ++
 
->   (functionCode (Cell.point (head myNewThreads))) ++ 
->   (valueCodes values) ++ 
->   (stackCode stack) ++
+>   "do signal <- takeMVar exit; putMVar exit signal; exitWith signal" ++
 >   concatMap (\next->functionNext next top values stack) myNewThreads
 
 The seccond value of NewEmptyMVar is the labelPoint.  The place where the lable is displayed has NO impact on the actual functioning of a grid.  It is esentially a comment.
@@ -263,9 +261,9 @@ The seccond value of NewEmptyMVar is the labelPoint.  The place where the lable 
 >  actionsCode (Cell.Action p code False True False Nothing next) top values stack
 >    where code = "takeMVar "++mvar
 
->actionsCode (Cell.End p) top values stack = 
+>actionsCode (Cell.End p) top values stack =
 >   functionHeader p values stack ++
->   "do signal <- takeMVar exit; putMVar exit signal; exitWith signal"
+>   "return ()"
 
 >actionsCode (Cell.Exit p signal) top values stack =
 >   functionHeader p values stack ++

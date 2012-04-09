@@ -1,9 +1,10 @@
 >module GridDrawing (buildTable) where
 
 >import Graphics.UI.Gtk
->import Graphics.Rendering.Cairo
 >import Data.Tuple
 >import Data.List
+>import Control.Concurrent
+
 
 >import Grid
 >import GridExtremes
@@ -11,51 +12,58 @@
 >import qualified DisplayCell
 >import qualified Cell
 >import qualified Path
+>import ThreadObject
+>import ArrowDrawing
 
 | Build the actual gtk table which shows our grid.
 
->buildTable :: ScrolledWindow -> Grid -> IO (Table, [VBox])
->buildTable scrwin mygrid = do
+>buildTable :: ScrolledWindow -> ThreadObject Grid -> ThreadObject (Maybe DisplayCell.DisplayCell) -> Grid -> IO Button
+>buildTable scrwin gridObject focusedCellObject mygrid = do{
+
+>     focusedWidgetMVar <- newEmptyMVar;
+
+>     focusedCellMVar <- newEmptyMVar;
+>     updateIO focusedCellObject (\focusedCell -> do{
+>      putMVar focusedCellMVar focusedCell;
+>      return focusedCell;
+>     });
+
+>     focusedCell <- takeMVar focusedCellMVar;
 
 This is a list of cells to be displayed.
 
->     displayCells <- return (DisplayCell.displayCellList mygrid)
+>     displayCells <- return (DisplayCell.displayCellList mygrid);
 
 We use these extremes to find how big a table to make.
 
->     grid_maximum_x <- return (maximum_x displayCells)
->     grid_maximum_y <- return (maximum_y displayCells)
->     grid_minimum_x <- return (minimum_x displayCells)
->     grid_minimum_y <- return (minimum_y displayCells)
+>     grid_maximum_x <- return (maximum_x displayCells);
+>     grid_maximum_y <- return (maximum_y displayCells);
+>     grid_minimum_x <- return (minimum_x displayCells);
+>     grid_minimum_y <- return (minimum_y displayCells);
 
 Y before X because tableNew goes Rows Collumns order.
 
->     table <- tableNew (lengthBetween grid_minimum_y grid_maximum_y) (lengthBetween grid_minimum_x grid_maximum_x) True
->     scrolledWindowAddWithViewport scrwin table
+>     table <- tableNew (lengthBetween grid_minimum_y grid_maximum_y) (lengthBetween grid_minimum_x grid_maximum_x) True;
+>     scrolledWindowAddWithViewport scrwin table;
 
 A "filled in" list of display cells, to make a complete grid, including blank cells.
 
->     displayCellsFilled <- return (DisplayCell.filledinDisplayCellList displayCells (grid_minimum_x,grid_minimum_y) (grid_maximum_x,grid_maximum_y))
-
-<     print "Raw display cells:"
-<     print (map DisplayCell.displayCellPoint displayCells)
-<     print "Final display cells:"
-<     print (map DisplayCell.displayCellPoint displayCellsFilled)
+>     displayCellsFilled <- return (DisplayCell.filledinDisplayCellList displayCells (grid_minimum_x,grid_minimum_y) (grid_maximum_x,grid_maximum_y));
 
 Now we build gtk widgets for each displayCell.
-     
->     cellVBoxList <- sequence (map cellForm displayCellsFilled)
+
+>     cellVBoxList <- sequence (map (cellForm gridObject focusedCellObject (focusedPoint focusedCell) focusedWidgetMVar) displayCellsFilled);
 
 Now we make a list of all the points that appear in our table to actually be drawn on the screen.
 
->     let places = map 
+>     places <- return (map 
 >                 (\p -> Super.subtractPoint p 
 >                       (grid_minimum_x,grid_minimum_y))
->          (map DisplayCell.displayCellPoint displayCellsFilled)
+>          (map DisplayCell.displayCellPoint displayCellsFilled));
 
 and then we zip those points with the widgets we want to attach to that table using the function attachCellForm to attach them.
 
->     sequence_ (zipWith (attachCellForm table) cellVBoxList places)
+>     sequence_ (zipWith (attachCellForm table) cellVBoxList places);
 
 Now we draw the lines in our diagram.
 
@@ -63,187 +71,163 @@ Now we draw the lines in our diagram.
 >       (\x -> do drawWin <- widgetGetDrawWindow table
 >                 allocations <- (mapM widgetGetAllocation  cellVBoxList)
 >                 renderWithDrawable drawWin (drawArrows (zip allocations displayCellsFilled))
->                 return False)
+>                 return False);
 
->     return (table, cellVBoxList)
+>     focusedWidget <- takeMVar focusedWidgetMVar;
+>     return focusedWidget;}
 
-
-
-Gather a list of arrows that look like [(Rectangle, Rectangle)].  Then draw the lines.
-
-| 'drawArrows' or lines between cells. 
-
->drawArrows :: [(Rectangle,DisplayCell.DisplayCell)] -> Render ()
->drawArrows cells = do
-
-We go through the list both forwards and backwards, completing arrows.
-
->      (arrows',unfinished_arrows) <- return (arrowsOf cells [])
->      arrows <- return (arrows' ++ 
->                        (fst (arrowsOf (reverse cells) unfinished_arrows)))
->      mapM drawArrow arrows
->      return ()
-
-| The 'arrowsOf' or between a list of cells.
-
- The first argument is the list of the display cells, and their geometric locations on the screen.  The seccond argument is the list of unfinished arrows.  When we come across a Fork, or Switch, or Code element we add a Rectangle and Point.  The Point is relative to the coordinate system of the Grid and not of the pixels on the screen :) .  We keep the tuple in the list of unfinished arrows untill we reach the Point of the other endo of the arrow.  Then we finish the arrow and add it to our output.
-
->arrowsOf :: [(Rectangle,DisplayCell.DisplayCell)] -> [(Rectangle,Super.Point)] -> ([(Rectangle,Rectangle)],[(Rectangle,Super.Point)])
-
-Path Arrows
-
->arrowsOf ((r, (DisplayCell.DisplayCellPath path)):cells) unfinished_arrows = 
-> arrowsOf' r (Path.point path) unfinished_arrows [(Path.point (Path.next path))] cells
-
-
-The arrows going down to the branches of a switch.
-
->arrowsOf ((r, (DisplayCell.DisplayCellCode cell@Cell.Switch{})):cells) unfinished_arrows = 
-> arrowsOf' r (Cell.point cell) unfinished_arrows (map Cell.patternPoint (Cell.patterns cell)) cells
-
->arrowsOf ((r,(DisplayCell.DisplayCellPattern pattern)):cells) unfinished_arrows =
-> arrowsOf' r (Cell.patternPoint pattern) unfinished_arrows [Cell.point (Cell.action pattern)] cells
-
-The arrows comming from any other type of cell.
-    
->arrowsOf ((r, (DisplayCell.DisplayCellCode cell)):cells) unfinished_arrows =
->  arrowsOf' r (Cell.point cell) unfinished_arrows ((map Cell.point (Cell.cellNext cell))++path_points) cells
->   where path_points = 
->          if
->           case cell of
-
-Types of cells which have paths:
-
->             Cell.Action{}      -> True
->             Cell.Destination{} -> True
->             Cell.Jump{}        -> True
->             _                  -> False
->          then maybe [] (\p -> [Path.point p]) (Cell.path cell)
->          else []
-
->arrowsOf (_:cells) unfinished_arrows =
->   arrowsOf cells unfinished_arrows
-
->arrowsOf [] unfinished_arrows = ([],unfinished_arrows)
-
->arrowsOf' :: Rectangle -> Super.Point -> [(Rectangle,Super.Point)] -> [Super.Point] -> [(Rectangle,DisplayCell.DisplayCell)] -> ([(Rectangle,Rectangle)],[(Rectangle,Super.Point)])
->arrowsOf' r p unfinished_arrows new_arrows cells =
->   (finished_arrows ++ finished_arrows',
->   unfinished_arrows')
-
->   where
->    (finished_arrows', unfinished_arrows') =
->      arrowsOf cells still_unfinished_arrows
- 
->    (finished_arrows, still_unfinished_arrows) = 
->      finished_and_still_unfinished_arrows r p unfinished_arrows new_arrows
-
-
-| 'finished_and_still_unfinished_arrows' given the Rectangle of the current Cell, the Point of the current cell, the list of previously unfinished arrows and the list of points which come next(this defines the newly unfinished arrows.)
-
-Returns ([finished_arrows],[still_unfinished_arrows])
-
->finished_and_still_unfinished_arrows :: Rectangle -> Super.Point -> [(Rectangle,Super.Point)] -> [Super.Point] -> ([(Rectangle, Rectangle)] , [(Rectangle,Super.Point)])
->finished_and_still_unfinished_arrows r p unfinished_arrows new_arrow_destinations =
->   (zip (map fst matches) (repeat r),
-
-Still unfinished arrows.
-
->   zip (repeat r) new_arrow_destinations ++
->   still_unmatched)
->   where (matches, still_unmatched) = partition (\unfinished_arrow -> snd unfinished_arrow == p) unfinished_arrows 
-
-
->drawArrow :: (Rectangle,Rectangle) -> Render ()
->drawArrow ((Rectangle x y w h), (Rectangle x1 y1 w1 h1)) = do
->    setSourceRGB 0 0 0
->    setLineWidth 2
-
->    moveTo (fromIntegral (x+(div w 2))) (fromIntegral (y+(div h 2)))
->    lineTo (fromIntegral (x1+(div w1 2))) (fromIntegral (y1+(div h1 2)))
-
->    stroke
+>focusedPoint (Just dc) = (DisplayCell.displayCellPoint dc)
+>focusedPoint Nothing = (0,0)
 
 | 'cellForm' generates a gtk widget which represents the a cell in our grid.  The return type of this should be changed, so that we get something more usefull than a VBox.  This should return a data which includes all widgets who's contents might want to be updated or saved.
 
->cellForm :: DisplayCell.DisplayCell -> IO VBox
->cellForm dc@(DisplayCell.DisplayCellCode cell) = do
->        info <- labelNew (Just ((show (DisplayCell.displayCellPoint dc)) ++"  Code"))
->        contents <- entryNew
->        entrySetText contents (Cell.cellText cell)
+>cellForm :: ThreadObject Grid -> ThreadObject (Maybe DisplayCell.DisplayCell) -> Super.Point -> MVar Button -> DisplayCell.DisplayCell -> IO VBox
+
+>cellForm gridObject focusedCellObject focusedPoint focusedWidgetMVar dc@(DisplayCell.DisplayCellCode cell@Cell.Action{}) = do
+>        outerBox <- vBoxNew False 0
+>        box <- hBoxNew False 0
+
+>        pure <- buttonNewWithLabel pureText
+>        set pure [buttonRelief := ReliefHalf]
+>        boxPackStart box pure PackNatural 0
+
+>        bind <- buttonNewWithLabel bindText
+>        set bind [buttonRelief := ReliefHalf]
+>        boxPackStart box bind PackNatural 0
+
+>        enter <- buttonNewWithLabel (Cell.cellText cell)
+>        set enter [buttonRelief := ReliefHalf]
+>        boxPackStart box enter PackGrow 0
+
+>        if Cell.point cell == focusedPoint
+>        then putMVar focusedWidgetMVar enter
+>        else return ()
+
+>        boxPackStart outerBox box PackGrow 0
+>        return outerBox
+
+>           where   bindText :: String 
+>                   bindText =
+>                    case cell of
+
+Push Pull
+
+>                     (Cell.Action _ _ _ True True _ _) -> "^>>=" 
+
+Push Don't Pull
+
+>                     (Cell.Action _ _ _ True False _ _) -> "^>>" 
+
+Don't Push Don't Pull
+
+>                     (Cell.Action _ _ _ False False _ _) -> ">>" 
+
+Don't Push Pull
+
+>                     (Cell.Action _ _ _ False True _ _) -> ">>=" 
+
+>                   pureText :: String
+>                   pureText =
+>                    case cell of
+
+Pure
+
+>                     (Cell.Action _ _ True _ _ _ _) -> "=" 
+
+Not pure
+
+>                     (Cell.Action _ _ False _ _ _ _) -> "!" 
+
+>cellForm gridObject focusedCellObject  focusedPoint focusedWidgetMVar dc@(DisplayCell.DisplayCellCode cell) = do
 >        box <- vBoxNew False 0
->        boxPackStart box info PackNatural 0
->        boxPackStart box contents PackNatural 0
+>        enter <- buttonNewWithLabel (Cell.cellText cell)
+>        set enter [buttonRelief := ReliefHalf]
+>        boxPackStart box enter PackGrow 0
+
+>        if Cell.point cell == focusedPoint
+>        then putMVar focusedWidgetMVar enter
+>        else return ()
+
 >        return box
 
->cellForm (DisplayCell.DisplayCellComment (point,text)) = do
->        info <- labelNew (Just ((show point)++" Comment"))
->        contents <- entryNew
->        entrySetText contents text
->        box <- vBoxNew False 0
->        boxPackStart box info PackNatural 0
->        boxPackStart box contents PackNatural 0
->        return box
 
->cellForm (DisplayCell.DisplayCellPath  path) = do
->        info <- labelNew (Just ((show (Path.point path))++" Path"))
+
+>cellForm gridObject focusedCellObject  focusedPoint focusedWidgetMVar (DisplayCell.DisplayCellComment (point,text)) = do
 >        box <- vBoxNew False 0
->        enter <- buttonNew
+>        enter <- buttonNewWithLabel text
+
+>        if point == focusedPoint
+>        then putMVar focusedWidgetMVar enter
+>        else return ()
+
+
 >        set enter [buttonRelief := ReliefNone]
 >        boxPackStart box enter PackGrow 0
->        boxPackStart box info PackNatural 0
 >        return box        
 
->cellForm (DisplayCell.DisplayCellArgument point argument) = do
->        info <- labelNew (Just ((show point)++" Argument"))
->        contents <- entryNew
->        entrySetText contents argument
->        box <- vBoxNew False 0
->        boxPackStart box info PackNatural 0
->        boxPackStart box contents PackNatural 0
->        return box
-       
->cellForm (DisplayCell.DisplayCellPattern pattern) = do
->        info <- labelNew (Just ((show (Cell.patternPoint pattern))++" Pattern"))
->        contents <- entryNew
->        entrySetText contents (Cell.pattern pattern)
->        box <- vBoxNew False 0
->        boxPackStart box info PackNatural 0
->        boxPackStart box contents PackNatural 0
->        return box
-
->cellForm (DisplayCell.DisplayCellMVarLabel point mvar) = do
->        info <- labelNew (Just ((show point)++" MVarLabel"))
->        contents <- entryNew
->        entrySetText contents mvar
->        box <- vBoxNew False 0
->        boxPackStart box info PackNatural 0
->        boxPackStart box contents PackNatural 0
->        return box
-
-
->cellForm (DisplayCell.DisplayCellBlank point) = do
+>cellForm gridObject focusedCellObject  focusedPoint focusedWidgetMVar  (DisplayCell.DisplayCellPath  path) = do
 >        box <- vBoxNew False 0
 >        enter <- buttonNew
 >        set enter [buttonRelief := ReliefNone]
+
+>        if Path.point path == focusedPoint
+>        then putMVar focusedWidgetMVar enter
+>        else return ()
+
+>        boxPackStart box enter PackGrow 0
+>        return box        
+
+>cellForm gridObject focusedCellObject focusedPoint focusedWidgetMVar  (DisplayCell.DisplayCellArgument point argument) = do
+>        box <- vBoxNew False 0
+>        enter <- buttonNewWithLabel ("Argument")
+>        set enter [buttonRelief := ReliefHalf]
 >        boxPackStart box enter PackGrow 0
 
-Now we draw the lines.
+>        if point == focusedPoint
+>        then putMVar focusedWidgetMVar enter
+>        else return ()
 
-<        onExpose box  $
-<            (\x -> do drawWin <- widgetGetDrawWindow box
-<                      renderWithDrawable drawWin drawArrows
-<                      return False)
+>        return box        
+       
+>cellForm gridObject focusedCellObject  focusedPoint focusedWidgetMVar (DisplayCell.DisplayCellPattern pattern) = do
+>        box <- vBoxNew False 0
+>        enter <- buttonNewWithLabel (Cell.pattern pattern)
+>        set enter [buttonRelief := ReliefHalf]
+>        boxPackStart box enter PackGrow 0
+
+>        if Cell.patternPoint pattern == focusedPoint
+>        then putMVar focusedWidgetMVar enter
+>        else return ()
+
+>        return box        
+
+>cellForm gridObject focusedCellObject focusedPoint focusedWidgetMVar (DisplayCell.DisplayCellMVarLabel point mvar) = do
+>        box <- vBoxNew False 0
+>        enter <- buttonNewWithLabel mvar
+>        set enter [buttonRelief := ReliefHalf]
+>        boxPackStart box enter PackGrow 0
+
+>        if point == focusedPoint
+>        then putMVar focusedWidgetMVar enter
+>        else return ()
+
+>        return box        
+
+>cellForm gridObject focusedCellObject focusedPoint focusedWidgetMVar dc@(DisplayCell.DisplayCellBlank point) = do
+>        box <- vBoxNew False 0
+>        enter <- buttonNew
+>        set enter [buttonRelief := ReliefNone]
+
+>        if point == focusedPoint
+>        then putMVar focusedWidgetMVar enter
+>        else return ()
+
+>        boxPackStart box enter PackGrow 0
+>        onClicked enter (do {update gridObject (gridPlusComment point "Hello!")})
+>        onFocus box (\_ -> do {update focusedCellObject (\_ -> Just dc);
+>                         return False})
 
 >        return box
-
-
-<        info <- labelNew (Just ((show point)++" Blank"))
-<        contents <- entryNew
-<        box <- vBoxNew False 0
-<        boxPackStart box info PackNatural 0
-<        boxPackStart box contents PackNatural 0
-<        return box
 
 >attachCellForm :: Table -> VBox -> (Int,Int) -> IO ()
 >attachCellForm table form (x,y) = 

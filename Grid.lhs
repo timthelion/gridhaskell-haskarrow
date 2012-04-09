@@ -35,3 +35,7 @@ GPLv3 (c) Timothy Hobbs
 >       gridPureFunctions = [("","")],
 >       gridComments      = [],
 >       gridCells         = Cell.End (0,0)}
+
+>gridPlusComment :: Point -> String -> Grid -> Grid
+>gridPlusComment point comment (Grid message gridName gridLicence gridImports gridPureFunctions gridComments gridCells) =
+>  Grid message gridName gridLicence gridImports gridPureFunctions ((point,comment):gridComments) gridCells

@@ -3,10 +3,11 @@
 Libraries external to application.
 
 >import Graphics.UI.Gtk hiding (cellText)
->import Data.IORef 
 >import System.Environment
 >import Data.List
 >import Control.Concurrent
+>import System.Posix.Unistd
+>import System.Exit
 
 Internal libraries.
 
@@ -24,39 +25,67 @@ And then we need some code to actually draw these DisplayCells on the screen.
 
 >import GridDrawing
 
+>import GridEditWindowEvents
+>import ThreadObject
+
+>import qualified Super
+
 >main :: IO ()
 >main = do
 >     mygrid <- loadGrid
 
 >     initGUI
 
-We use MVars to handle events.  This means no need for a global mutable state.  We can just sit in a loop and eat MVars all day.
+>     gridEditWindowEvent <- newEmptyMVar
 
->     gridEditWindowEvent <- newEmptyMVar 
->     myWidgets <- loadWidgets gridEditWindowEvent
->     (window,_,scrwin,_) <- return myWidgets
-     
+Special MVar used to quit.  Put a value here when you want to terminate.
+
+>     exit                <- newEmptyMVar
+
+
+>     gridObject          <- threadObject
+>     scrwinObject        <- threadObject 
+>     focusedCellObject   <- threadObject
+
+>     myWidgets <- loadWidgets gridEditWindowEvent gridObject
+>     (window,_,scrwin,scrwinContainer,_,cellInfo) <- return myWidgets
+
 >     widgetShowAll window
 
->     (table,cellFormList)<-buildTable scrwin mygrid
-     
->     widgetShowAll window
-     
+>     objectInit gridObject mygrid (syncGridwithScrwin window scrwinContainer scrwinObject gridObject focusedCellObject)
+>     objectInit scrwinObject scrwin (\_->return ())
+>     objectInit focusedCellObject Nothing (syncFocusedCellWithLabel cellInfo)
+
+>     forkIO $ handleGridEditWindowEvent exit Nothing gridEditWindowEvent
+
 >     forkIO mainGUI
->     event <-takeMVar gridEditWindowEvent
->     handleGridEditWindowEvent event gridEditWindowEvent
 
-This is a handy data type for figuring out what an event means.  It's like xlib's bitmasking.
+>     signal <- takeMVar exit
+>     exitWith signal
 
->data GridEditWindowEvent = GridEditWindowQuit | GridEditWindowSave
+>syncGridwithScrwin :: Window -> VBox -> ThreadObject ScrolledWindow -> ThreadObject Grid -> ThreadObject (Maybe DisplayCell.DisplayCell) -> Grid -> IO ()
+>syncGridwithScrwin window scrwinContainer scrwinObject gridObject focusedCellObject mygrid = do
+>   updateIO scrwinObject      (\scrwin      -> do{
+>   scrwinMVar <- newEmptyMVar; 
+>   postGUIAsync (do {
+>    containerRemove scrwinContainer scrwin;
+>    scrwin' <- scrolledWindowNew Nothing Nothing;
+>    focusedWidget <- buildTable scrwin' gridObject focusedCellObject mygrid;
+>    boxPackStart scrwinContainer scrwin' PackGrow 0;
+>    widgetShowAll window;
+>    widgetGrabFocus focusedWidget;
+>    putMVar scrwinMVar scrwin';
+>   });
+>   scrwin' <- takeMVar scrwinMVar;
+>   return scrwin';})
 
->handleGridEditWindowEvent :: GridEditWindowEvent -> MVar GridEditWindowEvent -> IO ()
->handleGridEditWindowEvent GridEditWindowQuit _ = print "Quit"
->handleGridEditWindowEvent GridEditWindowSave eventMVar = do
->    print "Save"
->    event<-(takeMVar eventMVar)
->    handleGridEditWindowEvent event eventMVar
->    return ()
+>syncFocusedCellWithLabel :: Label -> Maybe DisplayCell.DisplayCell -> IO()
+>syncFocusedCellWithLabel cellInfo (Just dc) = do
+>     set cellInfo [ labelText := (show (displayCellPoint dc))]
+>     return ()
+
+>syncFocusedCellWithLabel _ Nothing = do
+>     return ()
 
 >loadGrid :: IO Grid
 >loadGrid = do
@@ -72,15 +101,17 @@ This is a handy data type for figuring out what an event means.  It's like xlib'
 >                  windowDefaultWidth := 300, windowDefaultHeight := 250]
 >    return window
 
->loadWidgets :: MVar GridEditWindowEvent -> IO (Window, VBox, ScrolledWindow, HBox) 
->loadWidgets gridEditWindowEvent = do
+>loadWidgets :: MVar GridEditWindowEvent -> ThreadObject Grid-> IO (Window, VBox, ScrolledWindow, VBox, HBox, Label) 
+>loadWidgets gridEditWindowEvent gridObject = do
 >     window <- createWindow
+
 >     myTopVBox <- vBoxNew False 0
 >     containerAdd window myTopVBox
 
+>     scrwinContainer <-vBoxNew False 0
+>     boxPackStart myTopVBox scrwinContainer PackGrow 0
 >     scrwin <- scrolledWindowNew Nothing Nothing
->     boxPackStart myTopVBox scrwin PackGrow 0
-     
+>     boxPackStart scrwinContainer scrwin PackGrow 0
      
 >     sep2 <- hSeparatorNew
 >     boxPackStart myTopVBox sep2 PackNatural 7
@@ -90,11 +121,14 @@ This is a handy data type for figuring out what an event means.  It's like xlib'
 >     save <- buttonNewFromStock stockSave
 >     boxPackStart buttonBox save PackNatural 0
 
+>     cellInfo <- labelNew Nothing
+>     boxPackStart buttonBox cellInfo PackNatural 0
+
 >     quit <- buttonNewFromStock stockQuit
 >     boxPackEnd buttonBox quit PackNatural 0
 
->     onClicked save (do {putMVar gridEditWindowEvent GridEditWindowSave})
+<     onClicked save (do {putMVar gridEditWindowEvent GridEditWindowSave})
 
 >     onClicked quit (do {widgetDestroy window; putMVar gridEditWindowEvent GridEditWindowQuit})
 >     onDestroy window (do {mainQuit; putMVar gridEditWindowEvent GridEditWindowQuit})
->     return (window,myTopVBox, scrwin, buttonBox)
+>     return (window,myTopVBox, scrwin, scrwinContainer, buttonBox, cellInfo)
