@@ -29,6 +29,24 @@
 >displayCellPoint (DisplayCellMVarLabel point _) = point
 >displayCellPoint (DisplayCellPattern   pattern) = Cell.patternPoint pattern
 
+>displayCellText :: DisplayCell -> String
+>displayCellText (DisplayCellCode      cell)    = Cell.cellText    cell
+>displayCellText (DisplayCellComment   comment) = Grid.commentText comment
+>displayCellText (DisplayCellBlank     _)       = ""
+>displayCellText (DisplayCellPath      _)       = ""
+>displayCellText (DisplayCellArgument  _ t)     = t
+>displayCellText (DisplayCellMVarLabel _ t)     = t
+>displayCellText (DisplayCellPattern   pattern) = Cell.pattern pattern
+
+
+>displayCellBlank :: DisplayCell -> Bool
+>displayCellBlank DisplayCellBlank{} = True
+>displayCellBlank _                  = False
+
+>displayCellPath :: DisplayCell -> Bool
+>displayCellPath DisplayCellPath{} = True
+>displayCellPath _                  = False
+
 
 | A sorted list of all the non blank displayCells. We'll still mesh this out with blank cells to make a complete array.
 

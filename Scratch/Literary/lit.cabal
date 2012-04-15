@@ -1,0 +1,7 @@
+name:     Lit
+version:  1.0
+cabal-version: >= 1.2
+Build-Type:     Simple
+
+Executable helloworld
+  Main-Is:        lit.lhs

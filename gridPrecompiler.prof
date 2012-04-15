@@ -1,0 +1,39 @@
+	Fri Mar 23 20:41 2012 Time and Allocation Profiling Report  (Final)
+
+	   gridPrecompiler +RTS -p -RTS -i examplegrid.grid -o examplegrid.hs
+
+	total time  =        0.02 secs   (22 ticks @ 1000 us, 1 processor)
+	total alloc =   4,928,680 bytes  (excludes profiling overheads)
+
+COST CENTRE MODULE  %time %alloc
+
+CAF         Main    100.0   98.8
+
+
+                                                                       individual     inherited
+COST CENTRE MODULE                                   no.     entries  %time %alloc   %time %alloc
+
+MAIN        MAIN                                      88           0    0.0    0.0   100.0  100.0
+ CAF        Grid                                     175           0    0.0    0.0     0.0    0.0
+ CAF        Main                                     171           0  100.0   98.8   100.0   98.8
+ CAF        Path                                     170           0    0.0    0.0     0.0    0.0
+ CAF        Cell                                     169           0    0.0    0.0     0.0    0.0
+ CAF        Scope                                    168           0    0.0    0.0     0.0    0.0
+ CAF        System.Console.CmdArgs.Implicit.Global   161           0    0.0    0.0     0.0    0.0
+ CAF        System.Console.CmdArgs.Implicit.Reader   159           0    0.0    0.0     0.0    0.0
+ CAF        System.Console.CmdArgs.Implicit.UI       156           0    0.0    0.0     0.0    0.0
+ CAF        System.Console.CmdArgs.Annotate          155           0    0.0    0.0     0.0    0.0
+ CAF        System.Console.CmdArgs.Explicit          154           0    0.0    0.1     0.0    0.1
+ CAF        Data.Generics.Any.Prelude                151           0    0.0    0.0     0.0    0.0
+ CAF        System.Console.CmdArgs.Explicit.Help     148           0    0.0    0.0     0.0    0.0
+ CAF        GHC.IO.Encoding                          141           0    0.0    0.1     0.0    0.1
+ CAF        GHC.IO.Handle.FD                         138           0    0.0    0.7     0.0    0.7
+ CAF        Data.Data                                133           0    0.0    0.0     0.0    0.0
+ CAF        Data.Typeable.Internal                   124           0    0.0    0.0     0.0    0.0
+ CAF        Text.Read.Lex                            121           0    0.0    0.1     0.0    0.1
+ CAF        GHC.Conc.Signal                          119           0    0.0    0.0     0.0    0.0
+ CAF        GHC.Conc.Sync                            118           0    0.0    0.0     0.0    0.0
+ CAF        GHC.Exception                            117           0    0.0    0.0     0.0    0.0
+ CAF        GHC.IO.Encoding.Iconv                    115           0    0.0    0.0     0.0    0.0
+ CAF        GHC.IO.FD                                114           0    0.0    0.0     0.0    0.0
+ CAF        GHC.Read                                 113           0    0.0    0.0     0.0    0.0

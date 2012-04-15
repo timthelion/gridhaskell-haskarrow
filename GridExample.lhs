@@ -15,7 +15,7 @@ This is an example program written in grid haskell.  It reads characters from in
 
 >        gridName          = "gridhaskell",
 >        gridLicence       = "{-GPLv3-}",
->        gridImports       = ["Control.Concurrent","System"],
+>        gridImports       = ["Control.Concurrent","System.Exit"],
 >        gridPureFunctions = [("","")],
 >        gridComments      = [((-1,1), "This is a comment.")],
 
@@ -80,7 +80,8 @@ And then "Jumps" back up to the start of our "loop" which began at the switch st
 
 >	(Jump (-1,12) (Just (SteppingStone (0,12)
 >                (SteppingStone   (1,2)
->				 (PathDestination (0,1)))))))]))})])))))}
+>				 (PathDestination (0,1)))))))]))})]))))),
+>   gridLooseCells=[]}
 
 \end{code}
 

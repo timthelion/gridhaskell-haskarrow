@@ -1,0 +1,25 @@
+{-GPLv3-}
+import Control.Concurrent
+import Control.Monad
+import System
+
+main = f0x0 
+f0x0   = print "f0x0" >>getChar  >>= \v0x0 ->f0x1  v0x0 
+f0x1  p1  = return ('n' ) >>= \v0x1 ->f0x2 v0x1  p1 v0x1 
+f0x2 v0x1  p1 p2  = return ((==) p1 p2 ) >>= \v0x2 ->f0x3 v0x1  v0x2 
+f0x3 v0x1  (True) = f2x6 v0x1 
+f0x3 v0x1  (False) = f_2x6 v0x1 
+
+f2x6 v0x1   = return (v0x1  ) >>= \v2x6 ->f2x7 v0x1  v2x6 
+f2x7 v0x1  p1  = putChar p1  >>= \v6x1 ->f2x8 
+f2x8 = exitWith ExitSuccess
+
+f_2x6 v0x1   = do print "f_2x6" ; char <- newEmptyMVar;f_2x7 v0x1  char  
+f_2x7 v0x1  char   = do print "f_2x7" ; forkIO (f3x2 v0x1  char  );f6x1 v0x1  char  
+f6x1 v0x1  char   = print "f6x1" >>getChar  >>= \v6x1 ->f7x1 v0x1  char  v6x1 
+f7x1 v0x1  char  p1  = print "f7x1" >>putMVar char p1 >>= \v6x1 ->f7x2 
+f7x2 = forever (threadDelay 1000000)
+
+f3x2 v0x1  char   = print "f3x2">>takeMVar char  >>= \v3x2 ->f4x2 v0x1  char  v3x2
+f4x2 v0x1  char  p1  = print "f4x2">> putChar p1 >>print "f4x2" >>= \v4x2 ->f5x2 v0x1  char  
+f5x2 v0x1  char   = print "f5x2" >>f0x0  

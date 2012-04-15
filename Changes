@@ -1,0 +1,19 @@
+Changes 27.3:
+* Switch
+>  | Switch {
+>        point     :: Super.Point,
+>        patterns  :: [Pattern.Pattern]}
+
+
+Fork, no more MVars, newThreads is a list!
+
+* NewEmptyMVar
+>  | NewEmptyMVar {
+>        point     :: Super.Point,
+>        labelPoint:: Super.Point,
+>        mvar      :: String,
+>        next      :: Cell}
+
+
+* All MVars have labelPoint s now...
+>        labelPoint:: Super.Point,

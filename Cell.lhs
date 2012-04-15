@@ -161,6 +161,53 @@ We use this to build a list of cells for display on the screen.
 >cellNext cell@Switch{}   = map action (patterns cell)
 >cellNext cell            = [next cell]
 
+>cellPutCode :: Cell -> String -> Maybe Cell
+>cellPutCode _ "Fork"        = Nothing
+>cellPutCode _ "Jump"        = Nothing
+>cellPutCode _ "End"         = Nothing
+>cellPutCode _ "Switch"      = Nothing
+>cellPutCode _ "Destination" = Nothing
+>cellPutCode _ "Join"        = Nothing
+
+>cellPutCode cell@Start{}  code' = Just cell{code=code'}
+>cellPutCode cell@Action{} code' = Just cell{code=code'}
+
+>cellPutCode cell@NewEmptyMVar{} mvar' = Just cell{mvar=mvar'}
+>cellPutCode cell@TakeMVar{}     mvar' = Just cell{mvar=mvar'}
+>cellPutCode cell@PutMVar{}      mvar' = Just cell{mvar=mvar'}
+
+>cellPutCode cell@Exit{} signal' = Just cell{signal=signal'}
+
+|Put the first cell into the list of cells, at the point of the cell.  We return a tuple with our new tree of cells, plus the cells that used to come after the cell we just replaced.
+
+>cellPutCell :: Cell -> Cell -> (Cell,[Cell]) 
+
+>cellPutCell cell cells@Switch{} =
+> (cells',strays)
+> where (cells',strays) = if (point cell) == (point cells)
+>                          then (cell,cellNext cells)
+>                          else (cells{patterns=map (\pattern -> pattern{action=fst (cellPutCell cell (action pattern))}) (patterns cells)},[])
+
+>cellPutCell cell cells@Fork{} =
+> (cells',strays)
+> where (cells',strays) = if (point cell) == (point cells)
+>                          then (cell,cellNext cells)
+>                          else (cells{newThreads=map (\nextCells -> fst (cellPutCell cell nextCells)) (newThreads cells)},[])
+
+>cellPutCell cell cells@Jump{} =
+> (cells,[])
+>cellPutCell cell cells@End{} =
+> (cells,[])
+>cellPutCell cell cells@Exit{} =
+> (cells,[])
+
+>cellPutCell cell cells =
+> (cells',strays)
+> where (cells',strays) = if (point cell) == (point cells)
+>                          then (cell,cellNext cells)
+>                          else (cells{next=fst(cellPutCell cell (next cells))},[])
+
+
 | Return the Points of the arguments passed to the 'Start'.
 
 >argumentsPoints :: [(Super.Point,String)] -> [Super.Point]

@@ -1,0 +1,12 @@
+We start in Add comment mode.
+
+When a blank cell is pressed it turns into a comment cell.
+
+When we press enter on an action cell, we enter add action mode or Add pattern mode
+
+
+Fkey to enter
+Move mode/edit path mode - actions, patterns, paths, mvarlabels -- anything that isn't blank...
+	- after first drop, continue in edit path mode.
+
+Fkey to delete cell

@@ -1,10 +1,10 @@
->module GridDrawing (buildTable) where
+>module GridDrawing (drawGrid) where
 
 >import Graphics.UI.Gtk
 >import Data.Tuple
 >import Data.List
 >import Control.Concurrent
-
+>import Control.Monad.IO.Class
 
 >import Grid
 >import GridExtremes
@@ -14,21 +14,14 @@
 >import qualified Path
 >import ThreadObject
 >import ArrowDrawing
+>import EditModes
+>import GridEditorObjects
+>import GridAction
 
-| Build the actual gtk table which shows our grid.
+| Draw the actual gtk table which shows our grid.
 
->buildTable :: ScrolledWindow -> ThreadObject Grid -> ThreadObject (Maybe DisplayCell.DisplayCell) -> Grid -> IO Button
->buildTable scrwin gridObject focusedCellObject mygrid = do{
-
->     focusedWidgetMVar <- newEmptyMVar;
-
->     focusedCellMVar <- newEmptyMVar;
->     updateIO focusedCellObject (\focusedCell -> do{
->      putMVar focusedCellMVar focusedCell;
->      return focusedCell;
->     });
-
->     focusedCell <- takeMVar focusedCellMVar;
+>drawGrid :: GridEditorObjects -> Grid -> IO ()
+>drawGrid  editorObjects mygrid = do{
 
 This is a list of cells to be displayed.
 
@@ -41,18 +34,26 @@ We use these extremes to find how big a table to make.
 >     grid_minimum_x <- return (minimum_x displayCells);
 >     grid_minimum_y <- return (minimum_y displayCells);
 
+
 Y before X because tableNew goes Rows Collumns order.
 
+>     postGUIAsync (do {
 >     table <- tableNew (lengthBetween grid_minimum_y grid_maximum_y) (lengthBetween grid_minimum_x grid_maximum_x) True;
->     scrolledWindowAddWithViewport scrwin table;
+>     canvas <- getObjectValue (canvasObject editorObjects);
+>     scrolledWindowAddWithViewport canvas table;
 
 A "filled in" list of display cells, to make a complete grid, including blank cells.
 
 >     displayCellsFilled <- return (DisplayCell.filledinDisplayCellList displayCells (grid_minimum_x,grid_minimum_y) (grid_maximum_x,grid_maximum_y));
 
+We have to find the widget associated with the focused cell, such that upon redrawing everything, focus doesn't change.
+
+>     focusedWidgetMVar <- newEmptyMVar;
+>     focusedCell <- getObjectValue (focusedCellObject editorObjects);
+
 Now we build gtk widgets for each displayCell.
 
->     cellVBoxList <- sequence (map (cellForm gridObject focusedCellObject (focusedPoint focusedCell) focusedWidgetMVar) displayCellsFilled);
+>     cellBoxList <- sequence (map (cellForm editorObjects (focusedPoint focusedCell) focusedWidgetMVar) displayCellsFilled);
 
 Now we make a list of all the points that appear in our table to actually be drawn on the screen.
 
@@ -63,48 +64,50 @@ Now we make a list of all the points that appear in our table to actually be dra
 
 and then we zip those points with the widgets we want to attach to that table using the function attachCellForm to attach them.
 
->     sequence_ (zipWith (attachCellForm table) cellVBoxList places);
+>     sequence_ (zipWith (attachCellForm table) cellBoxList places);
 
-Now we draw the lines in our diagram.
+Now we add an event to draw the lines in our diagram.
 
 >     onExpose table  $
 >       (\x -> do drawWin <- widgetGetDrawWindow table
->                 allocations <- (mapM widgetGetAllocation  cellVBoxList)
+>                 allocations <- (mapM widgetGetAllocation  cellBoxList)
 >                 renderWithDrawable drawWin (drawArrows (zip allocations displayCellsFilled))
 >                 return False);
 
 >     focusedWidget <- takeMVar focusedWidgetMVar;
->     return focusedWidget;}
+>     widgetGrabFocus focusedWidget;
+>     widgetShowAll canvas
+>     })}
 
 >focusedPoint (Just dc) = (DisplayCell.displayCellPoint dc)
 >focusedPoint Nothing = (0,0)
 
 | 'cellForm' generates a gtk widget which represents the a cell in our grid.  The return type of this should be changed, so that we get something more usefull than a VBox.  This should return a data which includes all widgets who's contents might want to be updated or saved.
 
->cellForm :: ThreadObject Grid -> ThreadObject (Maybe DisplayCell.DisplayCell) -> Super.Point -> MVar Button -> DisplayCell.DisplayCell -> IO VBox
+>cellForm :: GridEditorObjects -> Super.Point -> MVar Widget -> DisplayCell.DisplayCell -> IO Box
 
->cellForm gridObject focusedCellObject focusedPoint focusedWidgetMVar dc@(DisplayCell.DisplayCellCode cell@Cell.Action{}) = do
->        outerBox <- vBoxNew False 0
+>cellForm editorObjects focusedPoint focusedWidgetMVar dc = do
+>       box <- hBoxNew False 0
+>       cellFormFill (toBox box) False editorObjects focusedPoint focusedWidgetMVar dc
+>       return (toBox box)
+
+>cellFormFill :: Box -> Bool -> GridEditorObjects -> Super.Point -> MVar Widget -> DisplayCell.DisplayCell -> IO ()
+
+>cellFormFill vbox edit editorObjects focusedPoint focusedWidgetMVar dc@(DisplayCell.DisplayCellCode cell@Cell.Action{}) = do
 >        box <- hBoxNew False 0
 
 >        pure <- buttonNewWithLabel pureText
 >        set pure [buttonRelief := ReliefHalf]
 >        boxPackStart box pure PackNatural 0
 
+>        cellFormFill' (DisplayCell.displayCellText dc) (toBox box) edit editorObjects focusedPoint focusedWidgetMVar dc
+
 >        bind <- buttonNewWithLabel bindText
 >        set bind [buttonRelief := ReliefHalf]
 >        boxPackStart box bind PackNatural 0
 
->        enter <- buttonNewWithLabel (Cell.cellText cell)
->        set enter [buttonRelief := ReliefHalf]
->        boxPackStart box enter PackGrow 0
-
->        if Cell.point cell == focusedPoint
->        then putMVar focusedWidgetMVar enter
->        else return ()
-
->        boxPackStart outerBox box PackGrow 0
->        return outerBox
+>        boxPackStart vbox box PackGrow 0
+>        return ()
 
 >           where   bindText :: String 
 >                   bindText =
@@ -136,99 +139,71 @@ Pure
 
 Not pure
 
->                     (Cell.Action _ _ False _ _ _ _) -> "!" 
+>                     (Cell.Action _ _ False _ _ _ _) -> "IO" 
 
->cellForm gridObject focusedCellObject  focusedPoint focusedWidgetMVar dc@(DisplayCell.DisplayCellCode cell) = do
->        box <- vBoxNew False 0
->        enter <- buttonNewWithLabel (Cell.cellText cell)
->        set enter [buttonRelief := ReliefHalf]
->        boxPackStart box enter PackGrow 0
+>cellFormFill box edit editorObjects focusedPoint focusedWidgetMVar dc = do
+> cellFormFill' (DisplayCell.displayCellText dc) box edit editorObjects focusedPoint focusedWidgetMVar dc
 
->        if Cell.point cell == focusedPoint
->        then putMVar focusedWidgetMVar enter
->        else return ()
+>cellFormFill' :: String -> Box -> Bool -> GridEditorObjects -> Super.Point -> MVar Widget -> DisplayCell.DisplayCell -> IO ()
 
->        return box
+>cellFormFill' text box edit editorObjects focusedPoint focusedWidgetMVar dc = do
+>        if not edit
+>        then do
+>         enter <- buttonNewWithLabel text
+>         if not $ (DisplayCell.displayCellBlank dc) || (DisplayCell.displayCellPath dc) 
+>         then set enter [buttonRelief := ReliefHalf]
+>         else set enter [buttonRelief := ReliefNone]
+>         boxPackStart box enter PackGrow 0
+>         onClicked enter (do {updateIO (editModeObject editorObjects) (editModeAction editorObjects focusedPoint focusedWidgetMVar dc box)})
+>         if (DisplayCell.displayCellPoint dc) == focusedPoint
+>         then putMVar focusedWidgetMVar (toWidget enter)
+>         else return ()
+>        else do
+>         entry <- entryNew
+>         entrySetText entry text
+>         boxPackStart box entry PackNatural 0
+>         widgetGrabFocus entry;
+>         entry `on` focusOutEvent $ do 
+>             { liftIO $ 
+>               updateIO (editModeObject editorObjects) 
+>                        (editModeCancleCellEdit editorObjects focusedPoint focusedWidgetMVar dc box);
+>               return False};
+>         entry `on` keyPressEvent $ tryEvent $ do
+>             "Return" <- eventKeyName
+>             liftIO $ do
+>               text <- entryGetText entry
+>               update (gridObject editorObjects) (GridAction.gridSetDisplayCellText dc text);
+>         return ()  
+
+>        return ()
+
+>editModeAction :: GridEditorObjects -> Super.Point -> MVar Widget -> DisplayCell.DisplayCell -> Box -> EditMode -> IO EditMode
+>editModeAction editorObjects focusedPoint focusedWidgetMVar dc vbox FreeMovement = do
+>   postGUIAsync (do {
+>   containerForeach vbox (containerRemove vbox);
+>   cellFormFill vbox True editorObjects focusedPoint focusedWidgetMVar dc; 
+>   widgetShowAll vbox;
+
+>   })
+>   return (EditCell dc)
 
 
+>editModeAction editorObjects focusedPoint focusedWidgetMVar dc vbox (EditCell cellWe'reEditing) = do
+>   containerForeach vbox (containerRemove vbox)
+>   cellFormFill vbox False editorObjects focusedPoint focusedWidgetMVar dc
+>   return (EditCell dc)
 
->cellForm gridObject focusedCellObject  focusedPoint focusedWidgetMVar (DisplayCell.DisplayCellComment (point,text)) = do
->        box <- vBoxNew False 0
->        enter <- buttonNewWithLabel text
+>editModeCancleCellEdit :: GridEditorObjects -> Super.Point -> MVar Widget -> DisplayCell.DisplayCell -> Box -> EditMode -> IO EditMode
+>editModeCancleCellEdit editorObjects focusedPoint focusedWidgetMVar dc vbox EditCell{} = do
+>   postGUIAsync (do {
+>   containerForeach vbox (containerRemove vbox);
+>   cellFormFill vbox False editorObjects focusedPoint focusedWidgetMVar dc; 
+>   widgetShowAll vbox;
 
->        if point == focusedPoint
->        then putMVar focusedWidgetMVar enter
->        else return ()
+>   })
+>   return FreeMovement
 
 
->        set enter [buttonRelief := ReliefNone]
->        boxPackStart box enter PackGrow 0
->        return box        
-
->cellForm gridObject focusedCellObject  focusedPoint focusedWidgetMVar  (DisplayCell.DisplayCellPath  path) = do
->        box <- vBoxNew False 0
->        enter <- buttonNew
->        set enter [buttonRelief := ReliefNone]
-
->        if Path.point path == focusedPoint
->        then putMVar focusedWidgetMVar enter
->        else return ()
-
->        boxPackStart box enter PackGrow 0
->        return box        
-
->cellForm gridObject focusedCellObject focusedPoint focusedWidgetMVar  (DisplayCell.DisplayCellArgument point argument) = do
->        box <- vBoxNew False 0
->        enter <- buttonNewWithLabel ("Argument")
->        set enter [buttonRelief := ReliefHalf]
->        boxPackStart box enter PackGrow 0
-
->        if point == focusedPoint
->        then putMVar focusedWidgetMVar enter
->        else return ()
-
->        return box        
-       
->cellForm gridObject focusedCellObject  focusedPoint focusedWidgetMVar (DisplayCell.DisplayCellPattern pattern) = do
->        box <- vBoxNew False 0
->        enter <- buttonNewWithLabel (Cell.pattern pattern)
->        set enter [buttonRelief := ReliefHalf]
->        boxPackStart box enter PackGrow 0
-
->        if Cell.patternPoint pattern == focusedPoint
->        then putMVar focusedWidgetMVar enter
->        else return ()
-
->        return box        
-
->cellForm gridObject focusedCellObject focusedPoint focusedWidgetMVar (DisplayCell.DisplayCellMVarLabel point mvar) = do
->        box <- vBoxNew False 0
->        enter <- buttonNewWithLabel mvar
->        set enter [buttonRelief := ReliefHalf]
->        boxPackStart box enter PackGrow 0
-
->        if point == focusedPoint
->        then putMVar focusedWidgetMVar enter
->        else return ()
-
->        return box        
-
->cellForm gridObject focusedCellObject focusedPoint focusedWidgetMVar dc@(DisplayCell.DisplayCellBlank point) = do
->        box <- vBoxNew False 0
->        enter <- buttonNew
->        set enter [buttonRelief := ReliefNone]
-
->        if point == focusedPoint
->        then putMVar focusedWidgetMVar enter
->        else return ()
-
->        boxPackStart box enter PackGrow 0
->        onClicked enter (do {update gridObject (gridPlusComment point "Hello!")})
->        onFocus box (\_ -> do {update focusedCellObject (\_ -> Just dc);
->                         return False})
-
->        return box
-
->attachCellForm :: Table -> VBox -> (Int,Int) -> IO ()
+>attachCellForm :: Table -> Box -> (Int,Int) -> IO ()
 >attachCellForm table form (x,y) = 
 >              tableAttachDefaults table form x (x+1) y (y+1)

@@ -2,7 +2,7 @@ This code generates more code which then compiles to a usefull executable.
 The contents of this file are released under the GPLv3 licence by Timothy Hobbs,
 
 >import System.Environment
->import System.Console.CmdArgs
+>import System.Console.CmdArgs.Implicit
 
 >import Grid
 >import GridPreCompile

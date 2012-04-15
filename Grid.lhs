@@ -9,6 +9,9 @@ GPLv3 (c) Timothy Hobbs
 >commentPoint :: Comment -> Point
 >commentPoint (p,_) = p
 
+>commentText :: Comment -> String
+>commentText (_,t) = t
+
 | Grid is our file type.  We read it and show it to load and unload the grid haskell files.
 
 >data Grid = Grid{
@@ -21,7 +24,8 @@ GPLv3 (c) Timothy Hobbs
 >        gridImports       :: [String],
 >        gridPureFunctions :: [(Prototype, String)],
 >        gridComments      :: [Comment],
->        gridCells         :: Cell.Cell}
+>        gridCells         :: Cell.Cell,
+>        gridLooseCells    :: [Cell.Cell]}
 > deriving (Read, Show)
   
 
@@ -34,8 +38,14 @@ GPLv3 (c) Timothy Hobbs
 >       gridImports       = [""],
 >       gridPureFunctions = [("","")],
 >       gridComments      = [],
->       gridCells         = Cell.End (0,0)}
+>       gridCells         = Cell.End (0,0),
+>       gridLooseCells    = []}
 
->gridPlusComment :: Point -> String -> Grid -> Grid
->gridPlusComment point comment (Grid message gridName gridLicence gridImports gridPureFunctions gridComments gridCells) =
->  Grid message gridName gridLicence gridImports gridPureFunctions ((point,comment):gridComments) gridCells
+>gridPutComment :: Point -> String -> Grid -> Grid
+>gridPutComment point comment (Grid message gridName gridLicence gridImports gridPureFunctions gridComments gridCells looseCells) =
+>  Grid message gridName gridLicence gridImports gridPureFunctions ((point,comment):(filter (\comment -> not $ point == (fst comment)) gridComments)) gridCells looseCells
+
+>gridPutCell :: Cell.Cell -> Grid -> Grid
+>gridPutCell cell grid = 
+>  grid{gridCells=fst (Cell.cellPutCell cell gridCells')}
+>  where gridCells' = gridCells grid
