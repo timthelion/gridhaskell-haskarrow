@@ -11,11 +11,10 @@
 >gridSetDisplayCellText (DisplayCellComment (point,_)) text grid =
 > gridPutComment point text grid
 
->gridSetDisplayCellText (DisplayCellComment (point,_)) text grid =
-> gridPutComment point text grid
-
 >gridSetDisplayCellText (DisplayCellCode cell) text grid =
 > let cell'Maybe = (cellPutCode cell text) in
 > case cell'Maybe of
->   Just cell' -> gridPutCell cell' grid
+>   Just cell' -> case gridPutCell cell' (point cell') grid of
+>                   Just grid' -> grid'
+>                   Nothing    -> grid
 >   Nothing    -> grid

@@ -8,6 +8,7 @@ The contents of this file are released under the GPLv3 licence by Timothy Hobbs,
 >import GridPreCompile
 >import GridExample
 >import Super
+>import GridHaskellFile
 
 >data GridPrecompiler = GridPrecompiler {
 >   inputFile         :: FilePath,
@@ -50,7 +51,7 @@ If one file is given but not the other print an error...
 >          if Main.version args then print versionString else return()
 
 >          if createExampleGrid args then
->            writeFile "examplegrid.grid-haskell" (show grid)
+>            writeFile "examplegrid.grid-haskell" (saveGrid grid)
 >          else return()
 
 >preCompile :: String -> String -> IO ()
@@ -59,7 +60,7 @@ If one file is given but not the other print an error...
 
 <            print "Reading the grid."
 
->            mygrid     <- return (read gridString::Grid)
+>            mygrid     <- return (openGrid gridString::Grid)
 
 <            print "Precompiling to haskell."
 

@@ -10,6 +10,7 @@ Libraries external to application.
 >import System.Posix.Unistd
 >import System.Exit
 >import EditModes
+>import Control.Monad.IO.Class
 
 Internal libraries.
 
@@ -43,6 +44,10 @@ There are also some Super generic types that belong no where else.  Like type Po
 
 >import qualified Super
 
+For reading and writing grid haskell files.
+
+>import GridHaskellFile
+
 >main :: IO ()
 >main = do
 >     (mygrid, filePath) <- loadGrid
@@ -66,23 +71,21 @@ Special MVar used to quit.  Put a value here when you want to terminate.
 >     editorObjects <- return (GridEditorObjects gridObject' canvasObject' editModeObject' focusedCellObject' fileObject' filePathObject')
 
 >     myWidgets <- loadWidgets gridEditWindowEvent editorObjects
->     (window,_,canvas,scrwinContainer,_,cellInfo) <- return myWidgets
-
->     widgetShowAll window
+>     (window,_,canvas,scrwinContainer,_,cellInfo,modeInfo) <- return myWidgets
 
 Note.  It would seem that order is important here as the sync function for gridObject references scrwinObject.   Luckly it is not.  When syncGridwithScrwin calls updateIO scrwinObject, updateIO will wait till the scrwinObject is initialized before continuing.
 
->     objectInit (editModeObject editorObjects) FreeMovement noSyncOnGet noSyncOnPut
+>     objectInit (editModeObject editorObjects) FreeMovement noSyncOnGet (syncEditModeWithLabel modeInfo)
 >     objectInit (gridObject editorObjects) mygrid noSyncOnGet (syncGridwithCanvas editorObjects)
 >     objectInit (canvasObject editorObjects) canvas noSyncOnGet noSyncOnPut
 >     objectInit (focusedCellObject editorObjects) Nothing noSyncOnGet (syncFocusedCellWithLabel cellInfo)
 >     objectInit (fileObject editorObjects) Nothing noSyncOnGet (saveFile editorObjects)
 >     objectInit (filePathObject editorObjects) filePath noSyncOnGet noSyncOnPut
 
-
 >     forkIO $ handleGridEditWindowEvent exit Nothing gridEditWindowEvent
 
->     forkIO mainGUI
+>     widgetShowAll window
+>     forkOS mainGUI
 
 >     signal <- takeMVar exit
 >     exitWith signal
@@ -94,6 +97,7 @@ We update the canvas with a new one which displays the new state of the grid.
 
 >   updateIO (canvasObject editorObjects)  (\canvas      -> do{
 >   canvasMVar <- newEmptyMVar;
+
 
 The function postGUIAsync is required to insure thread safety in GTK.  Without it, the sync function will succeed 30% of the time, and fail 70% of the time :D
 
@@ -128,6 +132,18 @@ This is a bit tricky.  The drawGrid function will not actually run untill after 
 >syncFocusedCellWithLabel _ Nothing = do
 >     return ()
 
+>syncEditModeWithLabel :: Label -> EditMode -> IO()
+>syncEditModeWithLabel modeInfo mode = do
+>     set modeInfo [ labelText := 
+>       (case mode of
+>         AddAction{}  -> "Add action mode"
+>         AddPattern{} -> "Add pattern mode"
+>         EditPath{}   -> "Path edit mode"
+>         MoveCell{}   -> "Move cell mode | F3 Exit Mode | Enter Place Cell"
+>         EditCell{}   -> "Cell edit mode"
+>         FreeMovement -> "Navigation mode | F3 MoveCell")]
+>     return ()
+
 >saveFile :: GridEditorObjects -> Maybe String -> IO()
 >saveFile editorObjects (Just contents) = do
 > filePath <- getObjectValue (filePathObject editorObjects)
@@ -142,7 +158,7 @@ This is a bit tricky.  The drawGrid function will not actually run untill after 
 >     then return (emptyGrid,"")
 >     else do {
 >     gridString <- readFile (head args);
->     return (read gridString::Grid,(head args))}
+>     return (openGrid gridString::Grid,(head args))}
 
 >createWindow :: IO Window
 >createWindow = do
@@ -151,7 +167,7 @@ This is a bit tricky.  The drawGrid function will not actually run untill after 
 >                  windowDefaultWidth := 300, windowDefaultHeight := 250]
 >    return window
 
->loadWidgets :: MVar GridEditWindowEvent -> GridEditorObjects -> IO (Window, VBox, ScrolledWindow, VBox, HBox, Label) 
+>loadWidgets :: MVar GridEditWindowEvent -> GridEditorObjects -> IO (Window, VBox, ScrolledWindow, VBox, HBox, Label,Label) 
 >loadWidgets gridEditWindowEvent editorObjects = do
 >     window <- createWindow
 
@@ -174,11 +190,31 @@ This is a bit tricky.  The drawGrid function will not actually run untill after 
 >     cellInfo <- labelNew Nothing
 >     boxPackStart buttonBox cellInfo PackNatural 0
 
+>     modeInfo <- labelNew Nothing
+>     boxPackStart buttonBox modeInfo PackNatural 0
+
 >     quit <- buttonNewFromStock stockQuit
 >     boxPackEnd buttonBox quit PackNatural 0
 
->     onClicked save (do {update2 (gridObject editorObjects) (fileObject editorObjects) (\grid file -> (grid, (Just $ show(grid))))})
+>     save `on` buttonPressEvent $ do{
+>         liftIO $ do {update2
+>            (gridObject editorObjects)
+>            (fileObject editorObjects)
+>            (\grid file -> (grid, (Just $ saveGrid(grid))))};
+>         return True}
+
+>     window `on` keyPressEvent $ tryEvent $ do
+>             "F3" <- eventKeyName
+>             liftIO $ do
+>               updateWith (focusedCellObject editorObjects) (editModeObject editorObjects)
+
+No need to finish the pattern with a Nothing, tryEvent will catch the exception...
+
+>                      (\(Just focusedCell) editMode -> 
+>                        case editMode of
+>                        MoveCell dc  -> FreeMovement
+>                        FreeMovement -> MoveCell focusedCell);
 
 >     onClicked quit (do {widgetDestroy window; putMVar gridEditWindowEvent GridEditWindowQuit})
 >     onDestroy window (do {mainQuit; putMVar gridEditWindowEvent GridEditWindowQuit})
->     return (window,myTopVBox, scrwin, scrwinContainer, buttonBox, cellInfo)
+>     return (window,myTopVBox, scrwin, scrwinContainer, buttonBox, cellInfo,modeInfo)

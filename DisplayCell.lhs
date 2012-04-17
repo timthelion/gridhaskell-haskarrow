@@ -53,6 +53,7 @@
 >displayCellList :: Grid.Grid -> [DisplayCell]
 >displayCellList grid = sortBy compareCells $
 >       (displayCellsfromCells (Grid.gridCells grid)) ++ 
+>       (concatMap displayCellsfromCells (Grid.gridLooseCells grid)) ++
 >       (displayCellsfromComments (Grid.gridComments grid))
     
 >compareCells :: DisplayCell -> DisplayCell -> Ordering
@@ -117,11 +118,6 @@ The extreme point is (3,3) but there is no content to go there.
 >    then (minimum_x,mypoint_y+1)
 >    else (mypoint_x+1, mypoint_y)
 
->displayCellsfromGrid :: Grid.Grid -> [DisplayCell]
->displayCellsfromGrid grid = (displayCellsfromCells (Grid.gridCells grid)) ++
->    (displayCellsfromComments (Grid.gridComments grid))
-
-
 | 'displayCellsfromCells' not only takes all the cells and turns them into DisplayCells, but also takes all their internal paths and does the same.
 
 >displayCellsfromCells :: Cell.Cell -> [DisplayCell]
@@ -144,7 +140,10 @@ DisplayCellMVarLabels
 
 DisplayCellPaths
 
->       Cell.Action{}       -> (displayCellsfromPath (Cell.path cell))
+>       Cell.Action{}       -> (displayCellsfromPath (Cell.path cell)) ++
+>                              case Cell.label cell of
+>                                Just (point, label) -> [DisplayCellMVarLabel point label]
+>                                Nothing             -> []
 >       Cell.Jump{}         -> (displayCellsfromPath (Cell.path cell))
 >       Cell.Destination{}  -> (displayCellsfromPath (Cell.path cell))
 >       _                   -> []

@@ -168,7 +168,7 @@ actionsCode
 
 We have one syntax for when push the value but don't pull the stack.
 
->actionsCode (Cell.Action p code preturn True False path next) top values stack = 
+>actionsCode (Cell.Action p code preturn True False _ path next) top values stack = 
 >   functionHeader p values stack ++
 >   (bodyCode code preturn 0) ++
 >   bindCode p (Scope.addPath values path p) stack next ++
@@ -177,7 +177,7 @@ We have one syntax for when push the value but don't pull the stack.
 
 Another syntax for when we pull the stack but don't push a value.
 
->actionsCode (Cell.Action p code preturn False True path next) top values stack =
+>actionsCode (Cell.Action p code preturn False True _ path next) top values stack =
 >   functionHeader p values stack  ++
 >    (bodyCode code preturn stack) ++
 >    bindCode p (Scope.addPath values path p) 0 next ++
@@ -185,7 +185,7 @@ Another syntax for when we pull the stack but don't push a value.
 
 A third syntax for when we both push and pull.
 
->actionsCode (Cell.Action p code preturn True True path next) top values stack =
+>actionsCode (Cell.Action p code preturn True True _ path next) top values stack =
 >	functionHeader p values stack ++
 >	(bodyCode code preturn stack) ++
 >	bindCode p (Scope.addPath values path p) 0 next ++
@@ -194,7 +194,7 @@ A third syntax for when we both push and pull.
 
 And a forth syntax for when we simply preform an action without touching the stack.
 
->actionsCode (Cell.Action p code preturn False False path next) top values stack =
+>actionsCode (Cell.Action p code preturn False False _ path next) top values stack =
 >   functionHeader p values stack ++
 >   (bodyCode code preturn 0)     ++
 >   bindCode p (Scope.addPath values path p) stack next ++
@@ -223,9 +223,8 @@ I'm not sure if we should carry the stack.  But it seems like it *might* be usef
 >actionsCode (Cell.Join point next) top values stack   =
 >   actionsCode next top (Scope.higherScope values) stack
 
->actionsCode (Cell.Destination mypoint porigin path next) top values stack =
->   actionsCode (Cell.Action mypoint code True True False path next) top values stack
->   where code = valueCode porigin
+>actionsCode (Cell.Destination mypoint porigin value path next) top values stack =
+>   actionsCode (Cell.Action mypoint value True True False (Just (mypoint, value)) path next) top values stack
 	
 >actionsCode (Cell.Jump p (Just path)) top values stack =
 >	functionHeader p values stack ++
@@ -254,11 +253,11 @@ The seccond value of NewEmptyMVar is the labelPoint.  The place where the lable 
 >   functionNext next top (Scope.mvarAdd values mvar) stack
 
 >actionsCode (Cell.PutMVar p _ mvar next) top values stack =
->  actionsCode (Cell.Action p code False False True Nothing next) top values stack
+>  actionsCode (Cell.Action p code False False True Nothing Nothing next) top values stack
 >    where code = "putMVar "++mvar
 
 >actionsCode (Cell.TakeMVar p _ mvar next) top values stack =
->  actionsCode (Cell.Action p code False True False Nothing next) top values stack
+>  actionsCode (Cell.Action p code False True False Nothing Nothing next) top values stack
 >    where code = "takeMVar "++mvar
 
 >actionsCode (Cell.End p) top values stack =

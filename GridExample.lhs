@@ -17,23 +17,25 @@ This is an example program written in grid haskell.  It reads characters from in
 >        gridLicence       = "{-GPLv3-}",
 >        gridImports       = ["Control.Concurrent","System.Exit"],
 >        gridPureFunctions = [("","")],
->        gridComments      = [((-1,1), "This is a comment.")],
+>        gridComments      = [((-1,1), "This is a comment."),
+>                             ((3,9), "These are some loose cells...")],
 
 >        gridCells = (Start (-1,0) "" "main" []
 
 Get a character from stdin and push it to the stack. 
 
->	(Action (0,0) "getChar" False True False Nothing 
+>	(Action (0,0) "getChar" False True False Nothing Nothing 
 
 Push 'n' to the stack.  We also carry this value down a path, just to sho we can...
 
->	(Action (0,1) "'n'" True True False (Just (SteppingStone (3,1)
+>	(Action (0,1) "'n'" True True False (Just ((1,1), "character"))
+>                                       (Just (SteppingStone (3,1)
 >                                       (SteppingStone   (3,6)
 >										(PathDestination (2,6)))))
 
 Pull the two stack items, compair them, and push the result to the stack.
 
->	(Action (0,2) "(==)" True True True Nothing
+>	(Action (0,2) "(==)" True True True Nothing Nothing
 
 Pull that value from the stack and pattern match it against True, or False, (an ulimited number of patters of course is possible :)
 
@@ -43,8 +45,8 @@ Pull that value from the stack and pattern match it against True, or False, (an 
 
 If the character typed was 'n' output the 'n' which we carried down the path from action (0,1)
 
->   action = (Destination (2,6) (0,1) Nothing
->	(Action (2,7) "putChar" False False True Nothing 
+>   action = (Destination (2,6) (0,1) "character" Nothing
+>	(Action (2,7) "putChar" False False True Nothing Nothing 
 
 and exit.  Note, there IS an important difference between Exit and End.  End does NOTHING.  Exit kills everything in an indiscriminate, imediate, and genocidal fashion.
 
@@ -69,7 +71,7 @@ Fork into two threads.  Despite there being a concept of parent and child thread
 
 One thread gets a character and puts it in our MVar.
 
->	[(Action (-4,9) "getChar" False True False Nothing
+>	[(Action (-4,9) "getChar" False True False Nothing Nothing
 >	(PutMVar (-4,10) (-3,10) "char" (End (-4,11)))),
 
 The other thread gets that character out of the MVar and puts it on the stack.
@@ -81,7 +83,7 @@ And then "Jumps" back up to the start of our "loop" which began at the switch st
 >	(Jump (-1,12) (Just (SteppingStone (0,12)
 >                (SteppingStone   (1,2)
 >				 (PathDestination (0,1)))))))]))})]))))),
->   gridLooseCells=[]}
+>   gridLooseCells=[(Action (3,10) "getChar" False True False Nothing Nothing (End (3,11)))]}
 
 \end{code}
 

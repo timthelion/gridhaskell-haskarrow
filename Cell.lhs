@@ -3,6 +3,8 @@
 >import qualified Path
 >import qualified Super
 
+>import Data.Maybe
+
 Patterns are owned by switch statements.
 
 >data Pattern = Pattern {patternPoint   :: Super.Point,
@@ -50,6 +52,8 @@ The getChar function has type IO Char and thus does not need to be "returned." T
 
 |  Path to any far away place where return value of action is used.  Sometimes the stack isn't very usefull though, and we really need to carry a value to another place in the code.  We want to make this as bright visual and clear as possible, so we make a path or line on the screen that shows where each value goes(is used).
 
+>        label     :: Maybe (Super.Point, String),
+
 >        path      :: (Maybe Path.Path), 
 
 | The next cell/action in on the grid in executable order.
@@ -63,7 +67,9 @@ The getChar function has type IO Char and thus does not need to be "returned." T
 
 | Origin place where the value was aquired/returned.
 
->        origin    :: Super.Point, 
+>        origin    :: Super.Point,
+
+>        value     :: String,
 
 | Path to any further uses of the value.
 
@@ -75,12 +81,6 @@ Switch statement.  One example of how visual programming may be better than text
 >  | Switch {
 >        point     :: Super.Point,
 >        patterns  :: [Pattern]}
-
-| The place at which the two branches of a switch join.  This is the end of scope for any values that became public within either of these values.
-
->  | Join {
->        point     :: Super.Point,
->        next      :: Cell}
 
 | Jump to an earlier point in the code(that point being the destination of the path).
 
@@ -141,8 +141,7 @@ As stated earlier, we use show and read to save this to a file.
 >cellText cell@Start{}        = code cell
 >cellText cell@Action{}       = code cell
 >cellText Switch{}            = "Switch"
->cellText Destination{}       = "->"
->cellText Join{}              = "Join" 
+>cellText cell@Destination{}  = value cell
 >cellText Jump{}              = "Jump"
 >cellText Fork{}              = "Fork"
 >cellText cell@NewEmptyMVar{} = "newEmptyMVar"
@@ -167,7 +166,6 @@ We use this to build a list of cells for display on the screen.
 >cellPutCode _ "End"         = Nothing
 >cellPutCode _ "Switch"      = Nothing
 >cellPutCode _ "Destination" = Nothing
->cellPutCode _ "Join"        = Nothing
 
 >cellPutCode cell@Start{}  code' = Just cell{code=code'}
 >cellPutCode cell@Action{} code' = Just cell{code=code'}
@@ -207,6 +205,106 @@ We use this to build a list of cells for display on the screen.
 >                          then (cell,cellNext cells)
 >                          else (cells{next=fst(cellPutCell cell (next cells))},[])
 
+| Returns a new cell with the list of point1s reloacted to their corresponding point2s in the (point1,point2) tuples.
+
+>cellPointsRelocation :: Cell -> [(Super.Point,Super.Point)] -> Cell
+>cellPointsRelocation originalCells@Start{} relocations  =
+>  (cellPointsRelocation' originalCells relocations){
+>  arguments = argumentsPointsRelocation (arguments originalCells) relocations,
+>  next = cellPointsRelocation (next originalCells) relocations
+>  }
+
+>cellPointsRelocation originalCells@Action{} relocations  =
+>  (cellPointsRelocation' originalCells relocations){
+>  label = case (label originalCells) of
+>            Just (p,s) -> Just (relocatePoint p relocations, s)
+>            Nothing    -> Nothing,
+>  path = case (path originalCells) of
+>            Just path -> Just $ pathPointsRelocation path relocations
+>            Nothing   -> Nothing,
+>  next = cellPointsRelocation (next originalCells) relocations
+>  }
+
+>cellPointsRelocation originalCells@Destination{} relocations  =
+>  (cellPointsRelocation' originalCells relocations){
+>  origin = relocatePoint (origin originalCells) relocations,
+>  path = case (path originalCells) of
+>            Just path -> Just $ pathPointsRelocation path relocations
+>            Nothing   -> Nothing,
+>  next = cellPointsRelocation (next originalCells) relocations
+>  }
+
+>cellPointsRelocation originalCells@Switch{} relocations  =
+>  (cellPointsRelocation' originalCells relocations){
+>    patterns = map (\pattern -> patternPointsRelocation pattern relocations) (patterns originalCells)}
+
+>cellPointsRelocation originalCells@Jump{} relocations  =
+>  (cellPointsRelocation' originalCells relocations){
+>  path = case (path originalCells) of
+>            Just path -> Just $ pathPointsRelocation path relocations
+>            Nothing   -> Nothing
+>  }
+
+>cellPointsRelocation originalCells@Fork{} relocations  =
+>  (cellPointsRelocation' originalCells relocations){
+>  newThreads = map (\thread -> cellPointsRelocation thread relocations) (newThreads originalCells)
+>  }
+
+>cellPointsRelocation originalCells@NewEmptyMVar{} relocations  =
+> mvarPointsRelocation originalCells relocations
+>cellPointsRelocation originalCells@PutMVar{} relocations  =
+> mvarPointsRelocation originalCells relocations
+>cellPointsRelocation originalCells@TakeMVar{} relocations  =
+> mvarPointsRelocation originalCells relocations
+
+>cellPointsRelocation originalCells relocations =
+> cellPointsRelocation' originalCells relocations
+
+>cellPointsRelocation' :: Cell -> [(Super.Point,Super.Point)] -> Cell
+>cellPointsRelocation' originalCells relocations  =
+> originalCells{
+>   point = relocatePoint (point originalCells) relocations}
+
+>argumentsPointsRelocation :: [(Super.Point,String)] ->  [(Super.Point,Super.Point)] -> [(Super.Point,String)]
+>argumentsPointsRelocation arguments relocations =
+> map
+>   (\argument ->
+>     (relocatePoint (fst argument) relocations,snd argument))
+>   arguments
+
+>pathPointsRelocation :: Path.Path -> [(Super.Point,Super.Point)] -> Path.Path
+>pathPointsRelocation path@Path.SteppingStone{} relocations =
+>  path{Path.point = relocatePoint (Path.point path) relocations,
+>       Path.next  = pathPointsRelocation (Path.next path) relocations}
+>pathPointsRelocation path@Path.PathDestination{} relocations =
+>  path{Path.point = relocatePoint (Path.point path) relocations}
+
+>patternPointsRelocation :: Pattern -> [(Super.Point,Super.Point)] -> Pattern
+>patternPointsRelocation pattern relocations =
+>  pattern{
+>   patternPoint = relocatePoint (patternPoint pattern) relocations,
+>   action = cellPointsRelocation (action pattern) relocations}
+
+>mvarPointsRelocation :: Cell ->  [(Super.Point,Super.Point)] -> Cell
+>mvarPointsRelocation originalCells relocations =
+>  (cellPointsRelocation' originalCells relocations){
+>   labelPoint = relocatePoint (labelPoint originalCells) relocations,
+>   next = cellPointsRelocation (next originalCells) relocations
+>   }
+
+
+>relocatePoint :: Super.Point -> [(Super.Point,Super.Point)] -> Super.Point
+>relocatePoint point relocations =
+>  case
+>     catMaybes $
+>      map
+>        (\tup -> if (fst tup) == point
+>                 then Just (snd tup)
+>                 else Nothing)
+>        relocations
+>     of
+>  (p:ps) -> p
+>  []     -> point
 
 | Return the Points of the arguments passed to the 'Start'.
 

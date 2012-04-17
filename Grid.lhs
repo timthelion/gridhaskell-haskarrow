@@ -45,7 +45,21 @@ GPLv3 (c) Timothy Hobbs
 >gridPutComment point comment (Grid message gridName gridLicence gridImports gridPureFunctions gridComments gridCells looseCells) =
 >  Grid message gridName gridLicence gridImports gridPureFunctions ((point,comment):(filter (\comment -> not $ point == (fst comment)) gridComments)) gridCells looseCells
 
->gridPutCell :: Cell.Cell -> Grid -> Grid
->gridPutCell cell grid = 
->  grid{gridCells=fst (Cell.cellPutCell cell gridCells')}
+Put the cell at the point specified into the grid.
+
+>gridPutCell :: Cell.Cell -> Point -> Grid -> Maybe Grid
+>gridPutCell cell point grid =
+>  if pointFilledGrid grid point
+>  then Nothing 
+>  else Just grid{gridCells=fst (Cell.cellPutCell cell gridCells')}
 >  where gridCells' = gridCells grid
+
+>gridPointsRelocation :: Grid -> [(Super.Point,Super.Point)] -> Grid
+>gridPointsRelocation grid relocations =
+> grid{gridCells = Cell.cellPointsRelocation (gridCells grid) relocations,
+>      gridLooseCells = map (\cell -> Cell.cellPointsRelocation cell relocations) (gridLooseCells grid)}
+
+TODO TODO TODO
+
+>pointFilledGrid :: Grid -> Point -> Bool
+>pointFilledGrid _ _ = False

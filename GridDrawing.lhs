@@ -29,10 +29,10 @@ This is a list of cells to be displayed.
 
 We use these extremes to find how big a table to make.
 
->     grid_maximum_x <- return (maximum_x displayCells);
->     grid_maximum_y <- return (maximum_y displayCells);
->     grid_minimum_x <- return (minimum_x displayCells);
->     grid_minimum_y <- return (minimum_y displayCells);
+>     grid_maximum_x <- return $ (maximum_x displayCells) + 1;
+>     grid_maximum_y <- return $ (maximum_y displayCells) + 1;
+>     grid_minimum_x <- return $ (minimum_x displayCells) - 1;
+>     grid_minimum_y <- return $ (minimum_y displayCells) - 1;
 
 
 Y before X because tableNew goes Rows Collumns order.
@@ -74,9 +74,12 @@ Now we add an event to draw the lines in our diagram.
 >                 renderWithDrawable drawWin (drawArrows (zip allocations displayCellsFilled))
 >                 return False);
 
->     focusedWidget <- takeMVar focusedWidgetMVar;
->     widgetGrabFocus focusedWidget;
->     widgetShowAll canvas
+>     forkIO $ putMVar focusedWidgetMVar Nothing;
+>     focusedWidgetMaybe <- takeMVar focusedWidgetMVar;
+>     case focusedWidgetMaybe of{
+>       Just focusedWidget -> widgetGrabFocus focusedWidget;
+>       Nothing -> error "We expected at least one widget to be focused!";};
+>     widgetShowAll canvas;
 >     })}
 
 >focusedPoint (Just dc) = (DisplayCell.displayCellPoint dc)
@@ -84,18 +87,16 @@ Now we add an event to draw the lines in our diagram.
 
 | 'cellForm' generates a gtk widget which represents the a cell in our grid.  The return type of this should be changed, so that we get something more usefull than a VBox.  This should return a data which includes all widgets who's contents might want to be updated or saved.
 
->cellForm :: GridEditorObjects -> Super.Point -> MVar Widget -> DisplayCell.DisplayCell -> IO Box
+>cellForm :: GridEditorObjects -> Super.Point -> MVar (Maybe Widget )-> DisplayCell.DisplayCell -> IO Box
 
 >cellForm editorObjects focusedPoint focusedWidgetMVar dc = do
 >       box <- hBoxNew False 0
 >       cellFormFill (toBox box) False editorObjects focusedPoint focusedWidgetMVar dc
 >       return (toBox box)
 
->cellFormFill :: Box -> Bool -> GridEditorObjects -> Super.Point -> MVar Widget -> DisplayCell.DisplayCell -> IO ()
+>cellFormFill :: Box -> Bool -> GridEditorObjects -> Super.Point -> MVar (Maybe Widget) -> DisplayCell.DisplayCell -> IO ()
 
->cellFormFill vbox edit editorObjects focusedPoint focusedWidgetMVar dc@(DisplayCell.DisplayCellCode cell@Cell.Action{}) = do
->        box <- hBoxNew False 0
-
+>cellFormFill box edit editorObjects focusedPoint focusedWidgetMVar dc@(DisplayCell.DisplayCellCode cell@Cell.Action{}) = do
 >        pure <- buttonNewWithLabel pureText
 >        set pure [buttonRelief := ReliefHalf]
 >        boxPackStart box pure PackNatural 0
@@ -105,8 +106,6 @@ Now we add an event to draw the lines in our diagram.
 >        bind <- buttonNewWithLabel bindText
 >        set bind [buttonRelief := ReliefHalf]
 >        boxPackStart box bind PackNatural 0
-
->        boxPackStart vbox box PackGrow 0
 >        return ()
 
 >           where   bindText :: String 
@@ -115,19 +114,19 @@ Now we add an event to draw the lines in our diagram.
 
 Push Pull
 
->                     (Cell.Action _ _ _ True True _ _) -> "^>>=" 
+>                     (Cell.Action _ _ _ True True _ _ _) -> "^>>=" 
 
 Push Don't Pull
 
->                     (Cell.Action _ _ _ True False _ _) -> "^>>" 
+>                     (Cell.Action _ _ _ True False _ _ _) -> "^>>" 
 
 Don't Push Don't Pull
 
->                     (Cell.Action _ _ _ False False _ _) -> ">>" 
+>                     (Cell.Action _ _ _ False False _ _ _) -> ">>" 
 
 Don't Push Pull
 
->                     (Cell.Action _ _ _ False True _ _) -> ">>=" 
+>                     (Cell.Action _ _ _ False True _ _ _) -> ">>=" 
 
 >                   pureText :: String
 >                   pureText =
@@ -135,16 +134,16 @@ Don't Push Pull
 
 Pure
 
->                     (Cell.Action _ _ True _ _ _ _) -> "=" 
+>                     (Cell.Action _ _ True _ _ _ _ _) -> "=" 
 
 Not pure
 
->                     (Cell.Action _ _ False _ _ _ _) -> "IO" 
+>                     (Cell.Action _ _ False _ _ _ _ _) -> "IO" 
 
 >cellFormFill box edit editorObjects focusedPoint focusedWidgetMVar dc = do
 > cellFormFill' (DisplayCell.displayCellText dc) box edit editorObjects focusedPoint focusedWidgetMVar dc
 
->cellFormFill' :: String -> Box -> Bool -> GridEditorObjects -> Super.Point -> MVar Widget -> DisplayCell.DisplayCell -> IO ()
+>cellFormFill' :: String -> Box -> Bool -> GridEditorObjects -> Super.Point -> MVar (Maybe Widget) -> DisplayCell.DisplayCell -> IO ()
 
 >cellFormFill' text box edit editorObjects focusedPoint focusedWidgetMVar dc = do
 >        if not edit
@@ -155,14 +154,22 @@ Not pure
 >         else set enter [buttonRelief := ReliefNone]
 >         boxPackStart box enter PackGrow 0
 >         onClicked enter (do {updateIO (editModeObject editorObjects) (editModeAction editorObjects focusedPoint focusedWidgetMVar dc box)})
+
+>         enter `on` focusInEvent $ do 
+>          { liftIO $ 
+>            update (focusedCellObject editorObjects)
+>                   (\_->(Just dc));
+>            return False};
+
 >         if (DisplayCell.displayCellPoint dc) == focusedPoint
->         then putMVar focusedWidgetMVar (toWidget enter)
+>         then putMVar focusedWidgetMVar (Just (toWidget enter))
 >         else return ()
 >        else do
 >         entry <- entryNew
 >         entrySetText entry text
 >         boxPackStart box entry PackNatural 0
 >         widgetGrabFocus entry;
+
 >         entry `on` focusOutEvent $ do 
 >             { liftIO $ 
 >               updateIO (editModeObject editorObjects) 
@@ -177,7 +184,7 @@ Not pure
 
 >        return ()
 
->editModeAction :: GridEditorObjects -> Super.Point -> MVar Widget -> DisplayCell.DisplayCell -> Box -> EditMode -> IO EditMode
+>editModeAction :: GridEditorObjects -> Super.Point -> MVar (Maybe Widget) -> DisplayCell.DisplayCell -> Box -> EditMode -> IO EditMode
 >editModeAction editorObjects focusedPoint focusedWidgetMVar dc vbox FreeMovement = do
 >   postGUIAsync (do {
 >   containerForeach vbox (containerRemove vbox);
@@ -193,7 +200,16 @@ Not pure
 >   cellFormFill vbox False editorObjects focusedPoint focusedWidgetMVar dc
 >   return (EditCell dc)
 
->editModeCancleCellEdit :: GridEditorObjects -> Super.Point -> MVar Widget -> DisplayCell.DisplayCell -> Box -> EditMode -> IO EditMode
+>editModeAction editorObjects focusedPoint focusedWidgetMVar dc vbox (MoveCell cellWe'reMoving) = do
+>   case cellWe'reMoving of
+>     DisplayCell.DisplayCellBlank{} -> return ()
+>     otherwise ->
+>              update (gridObject editorObjects)
+>                     (\grid -> gridPointsRelocation grid [(DisplayCell.displayCellPoint cellWe'reMoving,DisplayCell.displayCellPoint dc)])
+>   return (FreeMovement)
+
+
+>editModeCancleCellEdit :: GridEditorObjects -> Super.Point -> MVar (Maybe Widget) -> DisplayCell.DisplayCell -> Box -> EditMode -> IO EditMode
 >editModeCancleCellEdit editorObjects focusedPoint focusedWidgetMVar dc vbox EditCell{} = do
 >   postGUIAsync (do {
 >   containerForeach vbox (containerRemove vbox);

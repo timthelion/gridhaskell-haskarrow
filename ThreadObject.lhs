@@ -1,4 +1,4 @@
-GPL V 3 or higher, copyright brmlab.cz contact timothyhobbs@seznam.cz
+LGPL copyright brmlab.cz contact timothyhobbs@seznam.cz
 
 >module ThreadObject where
 >import Control.Concurrent
@@ -73,51 +73,47 @@ The bind/sync function, and the updateIO functions are NOT thread safe, or even 
 
 >update2 :: ThreadObject a -> ThreadObject b -> (a -> b -> (a,b)) -> IO ()
 >update2 to1 to2 action = do
->  valueMVar <- newEmptyMVar
+>  value1MVar <- newEmptyMVar
 >  updateIO to1 (\value1 -> do
 >   updateIO to2 (\value2 -> do
->    update2helper value1 value2 valueMVar action);
->    takeMVar valueMVar)
+>    update2helper value1 value2 value1MVar action);
+>    takeMVar value1MVar)
 
 >update2helper :: a -> b -> MVar a -> (a -> b -> (a,b)) -> IO b
 >update2helper a b aMVar action =
 >  let (a',b') = action a b in do
 >    putMVar aMVar a'
->    return b' 
+>    return b'
 
->update2' :: ThreadObject a -> ThreadObject b -> (a -> b -> (a,b)) -> IO ()
->update2' (ThreadObject _ actionIOMVar1 _ _ ticker1) (ThreadObject _ actionIOMVar2 _ _ ticker2) action = do
->    putMVar ticker1 IOAction
->    putMVar actionIOMVar1 action1
->    where action1 v1 = do
->           valueMVar <- newEmptyMVar;
->           putMVar ticker2 IOAction;
->           putMVar actionIOMVar2 (action2 valueMVar);
->           takeMVar valueMVar;
->           where action2 valueMVar v2 =
->                  let (v'1,v'2) = action v1 v2 in do
->                    putMVar valueMVar v'1
->                    return v'2
+>update3 :: ThreadObject a -> ThreadObject b -> ThreadObject c -> (a -> b-> c -> (a,b,c)) -> IO ()
+>update3 to1 to2 to3 action = do
+>  value1MVar <- newEmptyMVar
+>  value2MVar <- newEmptyMVar
+>  updateIO to1 (\value1 -> do
+>   updateIO to2 (\value2 -> do
+>    updateIO to3 (\value3 -> do
+>     update3helper value1 value2 value3 value1MVar value2MVar action);
+>    takeMVar value2MVar)
+>   takeMVar value1MVar)
 
->update3 :: ThreadObject a -> ThreadObject b -> ThreadObject c -> (a -> b -> c -> (a,b,c)) -> IO ()
->update3 (ThreadObject _ actionIOMVar1 _ _ ticker1) (ThreadObject _ actionIOMVar2 _ _ ticker2) (ThreadObject _ actionIOMVar3 _ _ ticker3) action = do
->    putMVar ticker1 IOAction
->    putMVar actionIOMVar1 action1
->    where action1 v1 = do
->           valueMVar1 <- newEmptyMVar;
->           putMVar ticker2 IOAction
->           putMVar actionIOMVar2 (action2 valueMVar1)
->           takeMVar valueMVar1
->           where action2 valueMVar1 v2 = do
->                  valueMVar2 <- newEmptyMVar;
->                  putMVar ticker3 IOAction
->                  putMVar actionIOMVar3 (action3 valueMVar1 valueMVar2)
->                  takeMVar valueMVar2
->                  where action3 valueMVar1 valueMVar2 v3 = 
->                           let (v'1,v'2,v'3) = action v1 v2 v3 in do
->                             putMVar valueMVar1 v'1;
->                             putMVar valueMVar2 v'2;
->                             return v'3;
+>update3helper :: a -> b -> c -> MVar a -> MVar b -> (a -> b -> c -> (a,b,c)) -> IO c
+>update3helper a b c aMVar bMVar action =
+>  let (a',b',c') = action a b c in do
+>    putMVar aMVar a'
+>    putMVar bMVar b'
+>    return c'
+
+>updateWith :: ThreadObject a -> ThreadObject b -> (a -> b -> b) -> IO ()
+>updateWith to1 to2 action = do
+> value1 <- getObjectValue to1
+> update to2 (action value1)
+
+>updateWith2 :: ThreadObject a -> ThreadObject b -> ThreadObject c -> (a -> b -> c -> c) -> IO ()
+>updateWith2 to1 to2 to3 action = do
+> value1 <- getObjectValue to1
+> value2 <- getObjectValue to2
+> update to3 (action value1 value2)
+
 
 >updateIO :: ThreadObject a -> (a -> IO a) -> IO ()
 >updateIO (ThreadObject _ actionIOMVar _ _ ticker) action = do
