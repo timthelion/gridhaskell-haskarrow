@@ -12,7 +12,7 @@ objectInit myObject myObjectsInitialValue syncorBindFunction
 
 The sync function is run every time the object's value is updated.  This makes it easy to "bind" an object to a GTK widget which displays it(for example).
 
-The nice thing about this library is that the two most frequently used functions are 100% thread safe!
+The nice thing about this library is that the two most frequently used functions are 100% thread safe(so long as you are using non mutable values and not GTK widgets or some other weirdness)!
 
 If you want to get an object's value, you can use getObjectValue.  This is thread safe.
 
@@ -23,53 +23,57 @@ update takes two arguments.  The object, and a pure haskell function which updat
 The bind/sync function, and the updateIO functions are NOT thread safe, or even thread aware, however.  Be carefull of these.
 
 >data ThreadObject a = ThreadObject{
->           actionMVar     :: MVar (a -> a),
->           actionIOMVar   :: MVar (a -> IO a),
->           syncOnGetMVar  :: MVar (a -> IO a),
->           syncOnPutMVar  :: MVar (a -> IO ()),
->           tickerMVar     :: MVar ActionType}
+>           tickerMVar     :: MVar (ActionType a)}
 
->data ActionType = IOAction | PureAction | SetSyncOnGet | SetSyncOnPut | FreeObject
+>data ActionType a = IOAction (a -> IO a) | PureAction (a -> a)| SetSyncOnGet (a -> IO a) | SetSyncOnPut (a -> IO ()) | GetObjectValueIO (a -> IO ()) | FreeObject
 
 >threadObject :: IO (ThreadObject a) 
 
 >threadObject = do
->    actionMVar    <- newEmptyMVar
->    actionIOMVar  <- newEmptyMVar
->    syncOnGetMVar <- newEmptyMVar
->    syncOnPutMVar <- newEmptyMVar
 >    tickerMVar    <- newEmptyMVar
->    return (ThreadObject actionMVar actionIOMVar syncOnGetMVar syncOnPutMVar tickerMVar)
+>    return (ThreadObject tickerMVar)
 
->objectInit :: ThreadObject a -> a -> (a -> IO a) -> (a -> IO ()) -> IO ()
->objectInit to value syncOnGet syncOnPut = do
->    forkIO $ loopObject to syncOnGet syncOnPut value
+>objectInit :: ThreadObject a -> a -> (a -> IO a) -> (a -> IO ()) -> Bool -> IO ()
+>objectInit to value syncOnGet syncOnPut wait = do
+>    forkIO $ loopObject to syncOnGet syncOnPut value wait
 >    return ()
 
->loopObject :: ThreadObject a -> (a -> IO a) -> (a -> IO ()) -> a -> IO ()
->loopObject  to@(ThreadObject actionMVar actionIOMVar syncOnGetMVar syncOnPutMVar tickerMVar)  syncOnGet syncOnPut value = do
->   syncOnPut value
+>loopObject :: ThreadObject a -> (a -> IO a) -> (a -> IO ()) -> a -> Bool -> IO ()
+>loopObject  to@(ThreadObject tickerMVar)  syncOnGet syncOnPut value wait = do
+>   if not wait
+>   then syncOnPut value
+>   else return ()
 >   actionType <- takeMVar tickerMVar
 >   case actionType of
->         IOAction   -> do action  <- takeMVar actionIOMVar
+>         IOAction   action        -> do
 >                          value'  <- syncOnGet value
 >                          value'' <- action value'
->                          loopObject to syncOnGet syncOnPut value''
->         PureAction -> do action  <- takeMVar actionMVar
+>                          loopObject to syncOnGet syncOnPut value'' False
+>         PureAction action        -> do
 >                          value'  <- syncOnGet value
->                          loopObject to syncOnGet syncOnPut (action value')
-
->         SetSyncOnGet -> do syncOnGet' <- takeMVar syncOnGetMVar
->                            loopObject to syncOnGet' syncOnPut value
->         SetSyncOnPut -> do syncOnPut' <- takeMVar syncOnPutMVar
->                            loopObject to syncOnGet syncOnPut' value
-
+>                          loopObject to syncOnGet syncOnPut (action value') False
+>         GetObjectValueIO getter  -> do
+>                          value'  <- syncOnGet value
+>                          getter value'
+>                          loopObject to syncOnGet syncOnPut value' True 
+>         SetSyncOnGet syncOnGet'  -> do
+>                       loopObject to syncOnGet' syncOnPut value False 
+>         SetSyncOnPut syncOnPut'  -> do
+>                       loopObject to syncOnGet syncOnPut' value False
 >         FreeObject   ->    return ()
 
 >update :: ThreadObject a -> (a -> a) -> IO ()
->update (ThreadObject actionMVar _ _ _ ticker) action = do
->    putMVar ticker PureAction
->    putMVar actionMVar action
+>update (ThreadObject tickerMVar) action = do
+>    putMVar tickerMVar (PureAction action)
+
+>updateReturning :: ThreadObject a -> (a -> (a,b)) -> IO b
+>updateReturning to action = do
+>  returnValueMVar <- newEmptyMVar
+>  updateIO to (\value -> do
+>   (value',returnValue) <- return (action value)
+>   putMVar returnValueMVar returnValue
+>   return value')
+>  takeMVar returnValueMVar
 
 >update2 :: ThreadObject a -> ThreadObject b -> (a -> b -> (a,b)) -> IO ()
 >update2 to1 to2 action = do
@@ -114,31 +118,37 @@ The bind/sync function, and the updateIO functions are NOT thread safe, or even 
 > value2 <- getObjectValue to2
 > update to3 (action value1 value2)
 
+| updateIO blocks by default.  Use updateIONoBlock if you don't want this to be the case.
 
 >updateIO :: ThreadObject a -> (a -> IO a) -> IO ()
->updateIO (ThreadObject _ actionIOMVar _ _ ticker) action = do
->    putMVar ticker IOAction
->    putMVar actionIOMVar action
+>updateIO (ThreadObject tickerMVar) action = do
+>    lock <- newEmptyMVar
+>    putMVar tickerMVar $ IOAction
+>        (\x -> do 
+>                x' <- action x;
+>                putMVar lock Nothing;
+>                return x')
+>    takeMVar lock
+>    return ()
+
+>updateIONoBlock :: ThreadObject a -> (a -> IO a) -> IO ()
+>updateIONoBlock (ThreadObject tickerMVar) action = do
+>    putMVar tickerMVar (IOAction action)
+
 
 >getObjectValue :: ThreadObject a -> IO a
->getObjectValue to = do
->     valueMVar <- newEmptyMVar;
->     updateIO to (\value -> do{
->      putMVar valueMVar value;
->      return value;
->     });
->     takeMVar valueMVar;
+>getObjectValue (ThreadObject tickerMVar) = do
+>    valueMVar <- newEmptyMVar
+>    putMVar tickerMVar (GetObjectValueIO (\value -> putMVar valueMVar value))
+>    takeMVar valueMVar
 
 >setSyncOnGet :: ThreadObject a -> (a -> IO a) -> IO ()
->setSyncOnGet (ThreadObject _ _ syncOnGetMVar _ ticker) syncOnGet = do
->    putMVar ticker SetSyncOnGet
->    putMVar syncOnGetMVar syncOnGet
+>setSyncOnGet (ThreadObject tickerMVar) syncOnGet = do
+>    putMVar tickerMVar $ SetSyncOnGet syncOnGet
 
 >setSyncOnPut :: ThreadObject a -> (a -> IO ()) -> IO ()
->setSyncOnPut (ThreadObject _ _ _ syncOnPutMVar ticker) syncOnPut = do
->    putMVar ticker SetSyncOnPut
->    putMVar syncOnPutMVar syncOnPut
-
+>setSyncOnPut (ThreadObject tickerMVar) syncOnPut = do
+>    putMVar tickerMVar $ SetSyncOnPut syncOnPut
 
 >noSyncOnGet :: a -> IO a
 >noSyncOnGet value = return value
@@ -147,4 +157,5 @@ The bind/sync function, and the updateIO functions are NOT thread safe, or even 
 >noSyncOnPut _ = return ()
 
 >freeObject :: ThreadObject a -> IO ()
->freeObject (ThreadObject _ _ _ _ ticker) = putMVar ticker FreeObject
+>freeObject (ThreadObject tickerMVar) = do
+>  putMVar tickerMVar FreeObject

@@ -61,31 +61,36 @@ Special MVar used to quit.  Put a value here when you want to terminate.
 >     exit                <- newEmptyMVar
 
 
->     gridObject'          <- threadObject
->     canvasObject'        <- threadObject 
->     focusedCellObject'   <- threadObject
->     editModeObject'      <- threadObject
->     fileObject'          <- threadObject
->     filePathObject'      <- threadObject
+>     gridObject'             <- threadObject
+>     canvasObject'           <- threadObject 
+>     focusedCellObject'      <- threadObject
+>     focusedRectangleObject' <- threadObject
+>     editModeObject'         <- threadObject
+>     fileObject'             <- threadObject
+>     filePathObject'         <- threadObject
+>     reFocusNeededObject'    <- threadObject
 
->     editorObjects <- return (GridEditorObjects gridObject' canvasObject' editModeObject' focusedCellObject' fileObject' filePathObject')
+>     editorObjects <- return (GridEditorObjects gridObject' canvasObject' editModeObject' focusedCellObject' focusedRectangleObject' reFocusNeededObject' fileObject' filePathObject')
 
 >     myWidgets <- loadWidgets gridEditWindowEvent editorObjects
 >     (window,_,canvas,scrwinContainer,_,cellInfo,modeInfo) <- return myWidgets
 
-Note.  It would seem that order is important here as the sync function for gridObject references scrwinObject.   Luckly it is not.  When syncGridwithScrwin calls updateIO scrwinObject, updateIO will wait till the scrwinObject is initialized before continuing.
-
->     objectInit (editModeObject editorObjects) FreeMovement noSyncOnGet (syncEditModeWithLabel modeInfo)
->     objectInit (gridObject editorObjects) mygrid noSyncOnGet (syncGridwithCanvas editorObjects)
->     objectInit (canvasObject editorObjects) canvas noSyncOnGet noSyncOnPut
->     objectInit (focusedCellObject editorObjects) Nothing noSyncOnGet (syncFocusedCellWithLabel cellInfo)
->     objectInit (fileObject editorObjects) Nothing noSyncOnGet (saveFile editorObjects)
->     objectInit (filePathObject editorObjects) filePath noSyncOnGet noSyncOnPut
-
->     forkIO $ handleGridEditWindowEvent exit Nothing gridEditWindowEvent
-
 >     widgetShowAll window
 >     forkOS mainGUI
+
+
+Note.  It would seem that order is important here as the sync function for gridObject references scrwinObject.   Luckly it is not.  When syncGridwithScrwin calls updateIO scrwinObject, updateIO will wait till the scrwinObject is initialized before continuing.
+
+>     objectInit (editModeObject editorObjects) FreeMovement noSyncOnGet (syncEditModeWithLabel modeInfo) False
+>     objectInit (gridObject editorObjects) mygrid noSyncOnGet (syncGridwithCanvas editorObjects) False
+>     objectInit (canvasObject editorObjects) canvas noSyncOnGet noSyncOnPut False
+>     objectInit (focusedCellObject editorObjects) Nothing noSyncOnGet (syncFocusedCellWithLabel cellInfo) True
+>     objectInit (focusedRectangleObject editorObjects) (Rectangle 0 0 0 0) noSyncOnGet (syncFocusedRectangleWithScrolledWindow editorObjects) True
+>     objectInit (reFocusNeededObject editorObjects) False noSyncOnGet noSyncOnPut True
+>     objectInit (fileObject editorObjects) Nothing noSyncOnGet (saveFile editorObjects) False
+>     objectInit (filePathObject editorObjects) filePath noSyncOnGet noSyncOnPut False
+
+>     forkIO $ handleGridEditWindowEvent exit Nothing gridEditWindowEvent
 
 >     signal <- takeMVar exit
 >     exitWith signal
@@ -93,11 +98,14 @@ Note.  It would seem that order is important here as the sync function for gridO
 >syncGridwithCanvas :: GridEditorObjects -> Grid -> IO ()
 >syncGridwithCanvas editorObjects mygrid = do
 
+We'll want to restore our scroll location(if possible) after we're done updating.
+
+>   oldRectangle <- getObjectValue (focusedRectangleObject editorObjects)
+
 We update the canvas with a new one which displays the new state of the grid.
 
 >   updateIO (canvasObject editorObjects)  (\canvas      -> do{
 >   canvasMVar <- newEmptyMVar;
-
 
 The function postGUIAsync is required to insure thread safety in GTK.  Without it, the sync function will succeed 30% of the time, and fail 70% of the time :D
 
@@ -122,7 +130,21 @@ This is a bit tricky.  The drawGrid function will not actually run untill after 
 >    putMVar canvasMVar canvas';
 >   });
 >   canvas' <- takeMVar canvasMVar;
+
+>   update (reFocusNeededObject editorObjects) (\_->True);
+>   canvas' `on` exposeEvent $ do {
+>         liftIO $ do {
+>         update2
+>           (reFocusNeededObject editorObjects)
+>           (focusedRectangleObject editorObjects)
+>              (\reFocus rect->
+>                if reFocus
+>                then (False, oldRectangle)
+>                else (False, rect));};
+>         return False;};
+
 >   return canvas';})
+
 
 >syncFocusedCellWithLabel :: Label -> Maybe 	DisplayCell.DisplayCell -> IO()
 >syncFocusedCellWithLabel cellInfo (Just dc) = do
@@ -139,8 +161,8 @@ This is a bit tricky.  The drawGrid function will not actually run untill after 
 >         AddAction{}  -> "Add action mode"
 >         AddPattern{} -> "Add pattern mode"
 >         EditPath{}   -> "Path edit mode"
->         MoveCell{}   -> "Move cell mode | F3 Exit Mode | Enter Place Cell"
->         EditCell{}   -> "Cell edit mode"
+>         MoveCell{}   -> "Move cell mode | F3/Esc Exit Mode | Enter Place Cell"
+>         EditCell{}   -> "Cell edit mode | Esc Exit Mode"
 >         FreeMovement -> "Navigation mode | F3 MoveCell")]
 >     return ()
 
@@ -150,6 +172,34 @@ This is a bit tricky.  The drawGrid function will not actually run untill after 
 > writeFile filePath contents
 >saveFile _ Nothing = return ()
 
+>syncFocusedRectangleWithScrolledWindow :: GridEditorObjects -> Rectangle -> IO()
+>syncFocusedRectangleWithScrolledWindow editorObjects rectangle@(Rectangle x y _ _) = do
+>  updateIO (canvasObject editorObjects) (\scrolledWindow -> do {
+>   postGUIAsync $ do {
+
+WARNING! This is a hack!
+
+>   scrolledWindowContents <- containerGetChildren scrolledWindow;
+>   (Rectangle _ _ aW aH)  <- widgetGetAllocation (head scrolledWindowContents);
+
+End of hack.
+
+>   adjustmentX    <- scrolledWindowGetHAdjustment scrolledWindow;
+>   upperX         <- adjustmentGetUpper adjustmentX;
+>   lowerX         <- adjustmentGetLower adjustmentX;
+>   adjustmentSetValue adjustmentX (scrollCord (fromIntegral x) upperX lowerX (fromIntegral aW));
+
+>   adjustmentY    <- scrolledWindowGetVAdjustment scrolledWindow;
+>   upperY         <- adjustmentGetUpper adjustmentY;
+>   lowerY         <- adjustmentGetLower adjustmentY;
+>   adjustmentSetValue adjustmentY (scrollCord (fromIntegral y) upperY lowerY (fromIntegral aH));
+>};
+>  return scrolledWindow;});
+
+>scrollCord cord upper lower boxAllocation
+> | cord + boxAllocation/2 > upper = upper - boxAllocation
+> | cord - boxAllocation/2 < lower = lower
+> | otherwise                      = cord - boxAllocation/2
 
 >loadGrid :: IO (Grid,FilePath)
 >loadGrid = do
@@ -203,9 +253,21 @@ This is a bit tricky.  The drawGrid function will not actually run untill after 
 >            (\grid file -> (grid, (Just $ saveGrid(grid))))};
 >         return True}
 
->     window `on` keyPressEvent $ tryEvent $ do
->             "F3" <- eventKeyName
->             liftIO $ do
+>     window `on` keyPressEvent $ do
+>            key <- eventKeyName
+
+<            liftIO (print key)
+
+>            case key of
+>             "Escape" ->
+>              liftIO $ do
+>               updateReturning (editModeObject editorObjects) 
+>                   (\mode->
+>                     case mode of
+>                       EditCell{} -> (mode,False)
+>                       otherwise  -> (FreeMovement,True))
+>             "F3" ->
+>              liftIO $ do
 >               updateWith (focusedCellObject editorObjects) (editModeObject editorObjects)
 
 No need to finish the pattern with a Nothing, tryEvent will catch the exception...
@@ -214,6 +276,8 @@ No need to finish the pattern with a Nothing, tryEvent will catch the exception.
 >                        case editMode of
 >                        MoveCell dc  -> FreeMovement
 >                        FreeMovement -> MoveCell focusedCell);
+>               return True;
+>             otherwise -> return False
 
 >     onClicked quit (do {widgetDestroy window; putMVar gridEditWindowEvent GridEditWindowQuit})
 >     onDestroy window (do {mainQuit; putMVar gridEditWindowEvent GridEditWindowQuit})

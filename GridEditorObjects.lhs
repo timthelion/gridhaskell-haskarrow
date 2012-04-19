@@ -26,6 +26,10 @@ Which display cell's widget is currently focused?
 
 >  focusedCellObject :: ThreadObject (Maybe DisplayCell.DisplayCell),
 
+>  focusedRectangleObject :: ThreadObject Rectangle,
+
+>  reFocusNeededObject    :: ThreadObject Bool,
+
 This is a special file saving object.  Put a string in it, and it will get saved to the file who's path is filePathObject.
 
 > fileObject :: ThreadObject (Maybe String),

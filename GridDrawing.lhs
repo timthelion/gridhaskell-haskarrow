@@ -46,14 +46,19 @@ A "filled in" list of display cells, to make a complete grid, including blank ce
 
 >     displayCellsFilled <- return (DisplayCell.filledinDisplayCellList displayCells (grid_minimum_x,grid_minimum_y) (grid_maximum_x,grid_maximum_y));
 
-We have to find the widget associated with the focused cell, such that upon redrawing everything, focus doesn't change.
-
->     focusedWidgetMVar <- newEmptyMVar;
->     focusedCell <- getObjectValue (focusedCellObject editorObjects);
-
 Now we build gtk widgets for each displayCell.
 
->     cellBoxList <- sequence (map (cellForm editorObjects (focusedPoint focusedCell) focusedWidgetMVar) displayCellsFilled);
+>     cellForms <- sequence (map (cellForm editorObjects) displayCellsFilled);
+
+We have to find the widget associated with the focused cell, such that upon redrawing everything, focus doesn't change.
+
+>     focusedCellMaybe <- getObjectValue (focusedCellObject editorObjects);
+
+>     focusedWidgetMaybe <- return (case focusedCellMaybe of
+>       Just focusedCell ->
+>        lookup (DisplayCell.displayCellPoint focusedCell) $ zip (map DisplayCell.displayCellPoint displayCellsFilled) (map snd cellForms)
+>       Nothing ->
+>        Nothing);
 
 Now we make a list of all the points that appear in our table to actually be drawn on the screen.
 
@@ -64,21 +69,19 @@ Now we make a list of all the points that appear in our table to actually be dra
 
 and then we zip those points with the widgets we want to attach to that table using the function attachCellForm to attach them.
 
->     sequence_ (zipWith (attachCellForm table) cellBoxList places);
+>     sequence_ (zipWith (attachCellForm table) (map fst cellForms) places);
 
 Now we add an event to draw the lines in our diagram.
 
 >     onExpose table  $
->       (\x -> do drawWin <- widgetGetDrawWindow table
->                 allocations <- (mapM widgetGetAllocation  cellBoxList)
+>       (\_ -> do drawWin <- widgetGetDrawWindow table
+>                 allocations <- (mapM widgetGetAllocation (map fst cellForms))
 >                 renderWithDrawable drawWin (drawArrows (zip allocations displayCellsFilled))
 >                 return False);
 
->     forkIO $ putMVar focusedWidgetMVar Nothing;
->     focusedWidgetMaybe <- takeMVar focusedWidgetMVar;
->     case focusedWidgetMaybe of{
+>     (case focusedWidgetMaybe of
 >       Just focusedWidget -> widgetGrabFocus focusedWidget;
->       Nothing -> error "We expected at least one widget to be focused!";};
+>       Nothing -> return ());
 >     widgetShowAll canvas;
 >     })}
 
@@ -87,26 +90,26 @@ Now we add an event to draw the lines in our diagram.
 
 | 'cellForm' generates a gtk widget which represents the a cell in our grid.  The return type of this should be changed, so that we get something more usefull than a VBox.  This should return a data which includes all widgets who's contents might want to be updated or saved.
 
->cellForm :: GridEditorObjects -> Super.Point -> MVar (Maybe Widget )-> DisplayCell.DisplayCell -> IO Box
+>cellForm :: GridEditorObjects -> DisplayCell.DisplayCell -> IO (Box,Widget)
 
->cellForm editorObjects focusedPoint focusedWidgetMVar dc = do
+>cellForm editorObjects dc = do
 >       box <- hBoxNew False 0
->       cellFormFill (toBox box) False editorObjects focusedPoint focusedWidgetMVar dc
->       return (toBox box)
+>       widget <- cellFormFill (toBox box) False editorObjects dc
+>       return ((toBox box), widget)
 
->cellFormFill :: Box -> Bool -> GridEditorObjects -> Super.Point -> MVar (Maybe Widget) -> DisplayCell.DisplayCell -> IO ()
+>cellFormFill :: Box -> Bool -> GridEditorObjects -> DisplayCell.DisplayCell -> IO Widget
 
->cellFormFill box edit editorObjects focusedPoint focusedWidgetMVar dc@(DisplayCell.DisplayCellCode cell@Cell.Action{}) = do
+>cellFormFill box edit editorObjects dc@(DisplayCell.DisplayCellCode cell@Cell.Action{}) = do
 >        pure <- buttonNewWithLabel pureText
 >        set pure [buttonRelief := ReliefHalf]
 >        boxPackStart box pure PackNatural 0
 
->        cellFormFill' (DisplayCell.displayCellText dc) (toBox box) edit editorObjects focusedPoint focusedWidgetMVar dc
+>        widget <- cellFormFill' (DisplayCell.displayCellText dc) (toBox box) edit editorObjects dc
 
 >        bind <- buttonNewWithLabel bindText
 >        set bind [buttonRelief := ReliefHalf]
 >        boxPackStart box bind PackNatural 0
->        return ()
+>        return widget
 
 >           where   bindText :: String 
 >                   bindText =
@@ -140,12 +143,12 @@ Not pure
 
 >                     (Cell.Action _ _ False _ _ _ _ _) -> "IO" 
 
->cellFormFill box edit editorObjects focusedPoint focusedWidgetMVar dc = do
-> cellFormFill' (DisplayCell.displayCellText dc) box edit editorObjects focusedPoint focusedWidgetMVar dc
+>cellFormFill box edit editorObjects dc = do
+> cellFormFill' (DisplayCell.displayCellText dc) box edit editorObjects dc
 
->cellFormFill' :: String -> Box -> Bool -> GridEditorObjects -> Super.Point -> MVar (Maybe Widget) -> DisplayCell.DisplayCell -> IO ()
+>cellFormFill' :: String -> Box -> Bool -> GridEditorObjects -> DisplayCell.DisplayCell -> IO Widget
 
->cellFormFill' text box edit editorObjects focusedPoint focusedWidgetMVar dc = do
+>cellFormFill' text box edit editorObjects dc = do
 >        if not edit
 >        then do
 >         enter <- buttonNewWithLabel text
@@ -153,17 +156,18 @@ Not pure
 >         then set enter [buttonRelief := ReliefHalf]
 >         else set enter [buttonRelief := ReliefNone]
 >         boxPackStart box enter PackGrow 0
->         onClicked enter (do {updateIO (editModeObject editorObjects) (editModeAction editorObjects focusedPoint focusedWidgetMVar dc box)})
+>         onClicked enter (do {updateIO (editModeObject editorObjects) (editModeAction editorObjects dc box)})
 
 >         enter `on` focusInEvent $ do 
->          { liftIO $ 
+>          { liftIO $ do {
 >            update (focusedCellObject editorObjects)
 >                   (\_->(Just dc));
->            return False};
 
->         if (DisplayCell.displayCellPoint dc) == focusedPoint
->         then putMVar focusedWidgetMVar (Just (toWidget enter))
->         else return ()
+>            updateIO (focusedRectangleObject editorObjects) (\_-> do
+>                {widgetGetAllocation box});
+>            return ();};
+>            return False};
+>         return (toWidget enter)
 >        else do
 >         entry <- entryNew
 >         entrySetText entry text
@@ -171,36 +175,44 @@ Not pure
 >         widgetGrabFocus entry;
 
 >         entry `on` focusOutEvent $ do 
->             { liftIO $ 
+>             { liftIO $ do
 >               updateIO (editModeObject editorObjects) 
->                        (editModeCancleCellEdit editorObjects focusedPoint focusedWidgetMVar dc box);
+>                        (editModeCancleCellEdit editorObjects dc box);
 >               return False};
+
 >         entry `on` keyPressEvent $ tryEvent $ do
->             "Return" <- eventKeyName
->             liftIO $ do
+>            key  <- eventKeyName
+
+>            case key of
+>             "Return" ->
+>              liftIO $ do
 >               text <- entryGetText entry
 >               update (gridObject editorObjects) (GridAction.gridSetDisplayCellText dc text);
->         return ()  
 
->        return ()
+>             "Escape" -> 
+>              liftIO $ do
+>               updateIO (editModeObject editorObjects) 
+>                        (editModeCancleCellEditEscape editorObjects dc box);
 
->editModeAction :: GridEditorObjects -> Super.Point -> MVar (Maybe Widget) -> DisplayCell.DisplayCell -> Box -> EditMode -> IO EditMode
->editModeAction editorObjects focusedPoint focusedWidgetMVar dc vbox FreeMovement = do
+>         return (toWidget entry)
+
+>editModeAction :: GridEditorObjects -> DisplayCell.DisplayCell -> Box -> EditMode -> IO EditMode
+>editModeAction editorObjects dc vbox FreeMovement = do
 >   postGUIAsync (do {
 >   containerForeach vbox (containerRemove vbox);
->   cellFormFill vbox True editorObjects focusedPoint focusedWidgetMVar dc; 
+>   cellFormFill vbox True editorObjects dc; 
 >   widgetShowAll vbox;
 
 >   })
 >   return (EditCell dc)
 
 
->editModeAction editorObjects focusedPoint focusedWidgetMVar dc vbox (EditCell cellWe'reEditing) = do
+>editModeAction editorObjects dc vbox (EditCell cellWe'reEditing) = do
 >   containerForeach vbox (containerRemove vbox)
->   cellFormFill vbox False editorObjects focusedPoint focusedWidgetMVar dc
+>   cellFormFill vbox False editorObjects dc
 >   return (EditCell dc)
 
->editModeAction editorObjects focusedPoint focusedWidgetMVar dc vbox (MoveCell cellWe'reMoving) = do
+>editModeAction editorObjects dc vbox (MoveCell cellWe'reMoving) = do
 >   case cellWe'reMoving of
 >     DisplayCell.DisplayCellBlank{} -> return ()
 >     otherwise ->
@@ -209,14 +221,32 @@ Not pure
 >   return (FreeMovement)
 
 
->editModeCancleCellEdit :: GridEditorObjects -> Super.Point -> MVar (Maybe Widget) -> DisplayCell.DisplayCell -> Box -> EditMode -> IO EditMode
->editModeCancleCellEdit editorObjects focusedPoint focusedWidgetMVar dc vbox EditCell{} = do
+>editModeCancleCellEdit :: GridEditorObjects -> DisplayCell.DisplayCell -> Box -> EditMode -> IO EditMode
+>editModeCancleCellEdit editorObjects dc vbox EditCell{} = do
 >   postGUIAsync (do {
 >   containerForeach vbox (containerRemove vbox);
->   cellFormFill vbox False editorObjects focusedPoint focusedWidgetMVar dc; 
+>   cellFormFill vbox False editorObjects dc; 
 >   widgetShowAll vbox;
 
 >   })
+>   return FreeMovement
+
+>editModeCancleCellEdit _ _ _ FreeMovement = do
+>  return FreeMovement
+
+>editModeCancleCellEdit _ _ _ mode = do
+>  return $ error "Help! Expected to be in EditCell mode, but instead I got:" ++ (show mode)
+>  return FreeMovement
+
+>editModeCancleCellEditEscape :: GridEditorObjects -> DisplayCell.DisplayCell -> Box -> EditMode -> IO EditMode
+>editModeCancleCellEditEscape editorObjects dc vbox EditCell{} = do
+>   postGUIAsync (do {
+>   containerForeach vbox (containerRemove vbox);
+>   focusedWidget <- cellFormFill vbox False editorObjects dc;
+>   widgetShowAll vbox;
+>   widgetGrabFocus focusedWidget
+>   })
+
 >   return FreeMovement
 
 
