@@ -1,8 +1,0 @@
----------lit.lh----------
--- | Hi there
-
-
-
-main = print "Hello World!"
-
-

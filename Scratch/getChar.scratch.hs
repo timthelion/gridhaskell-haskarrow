@@ -1,1 +1,0 @@
-main = getChar >>= putChar >> main
