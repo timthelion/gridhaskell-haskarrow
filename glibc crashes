@@ -1,0 +1,379 @@
+*** glibc detected *** ./grid_edit: double free or corruption (fasttop): 0x00007f9008114e70 ***
+======= Backtrace: =========
+/lib/libc.so.6(+0x78a56)[0x7f9015fcca56]
+/lib/libc.so.6(+0x7b520)[0x7f9015fcf520]
+/lib/libc.so.6(realloc+0xed)[0x7f9015fd114d]
+/usr/lib/libglib-2.0.so.0(g_realloc+0x31)[0x7f90170dc581]
+/usr/lib/libgdk-x11-2.0.so.0(+0x32e52)[0x7f90191a2e52]
+/usr/lib/libgdk-x11-2.0.so.0(+0x33e1d)[0x7f90191a3e1d]
+/usr/lib/libgdk-x11-2.0.so.0(gdk_region_union+0x97)[0x7f90191a4487]
+/usr/lib/libgdk-x11-2.0.so.0(+0x3dfe7)[0x7f90191adfe7]
+/usr/lib/libgtk-x11-2.0.so.0(+0x24f940)[0x7f9019672940]
+/usr/lib/libgtk-x11-2.0.so.0(+0x255076)[0x7f9019678076]
+/usr/lib/libgtk-x11-2.0.so.0(gtk_widget_queue_resize+0x5c)[0x7f90196780ec]
+/usr/lib/libgtk-x11-2.0.so.0(+0x126f3b)[0x7f9019549f3b]
+/usr/lib/libgtk-x11-2.0.so.0(gtk_label_set_text+0x9d)[0x7f901954ae8d]
+./grid_edit[0x5a4a63]
+======= Memory map: ========
+00400000-006c1000 r-xp 00000000 08:04 6951483                            /home/timothy/works/current/grid haskell/grid_edit
+008c0000-008dc000 rwxp 002c0000 08:04 6951483                            /home/timothy/works/current/grid haskell/grid_edit
+008dc000-008e5000 rwxp 00000000 00:00 0 
+023d6000-025e3000 rwxp 00000000 00:00 0                                  [heap]
+7f8ffc000000-7f8ffc021000 rwxp 00000000 00:00 0 
+7f8ffc021000-7f9000000000 ---p 00000000 00:00 0 
+7f9000000000-7f9000021000 rwxp 00000000 00:00 0 
+7f9000021000-7f9004000000 ---p 00000000 00:00 0 
+7f9004000000-7f9004021000 rwxp 00000000 00:00 0 
+7f9004021000-7f9008000000 ---p 00000000 00:00 0 
+7f9008000000-7f900826d000 rwxp 00000000 00:00 0 
+7f900826d000-7f900c000000 ---p 00000000 00:00 0 
+7f900c000000-7f900c021000 rwxp 00000000 00:00 0 
+7f900c021000-7f9010000000 ---p 00000000 00:00 0 
+7f90102eb000-7f9010300000 r-xp 00000000 08:03 358801                     /usr/lib/libgcc_s.so.1
+7f9010300000-7f90104ff000 ---p 00015000 08:03 358801                     /usr/lib/libgcc_s.so.1
+7f90104ff000-7f9010500000 rwxp 00014000 08:03 358801                     /usr/lib/libgcc_s.so.1
+7f9010500000-7f9010600000 rwxp 00000000 00:00 0 
+7f901069e000-7f901069f000 rwxp 00000000 00:00 0 
+7f901069f000-7f90106a0000 ---p 00000000 00:00 0 
+7f90106a0000-7f9010ea0000 rwxp 00000000 00:00 0 
+7f9010ea0000-7f9010f00000 rwxs 00000000 00:04 23199754                   /SYSV00000000 (deleted)
+7f9010f00000-7f9011000000 rwxp 00000000 00:00 0 
+7f901103f000-7f9011040000 ---p 00000000 00:00 0 
+7f9011040000-7f9011840000 rwxp 00000000 00:00 0 
+7f9011840000-7f9011841000 ---p 00000000 00:00 0 
+7f9011841000-7f9012041000 rwxp 00000000 00:00 0 
+7f9012041000-7f90120f1000 r-xp 00000000 08:03 538291                     /usr/share/fonts/TTF/DejaVuSans.ttf
+7f90120f1000-7f90120f2000 ---p 00000000 00:00 0 
+7f90120f2000-7f90128f2000 rwxp 00000000 00:00 0 
+7f90128f2000-7f90128fe000 r-xp 00000000 08:03 496818                     /lib/libnss_files-2.15.so
+7f90128fe000-7f9012afd000 ---p 0000c000 08:03 496818                     /lib/libnss_files-2.15.so
+7f9012afd000-7f9012afe000 r-xp 0000b000 08:03 496818                     /lib/libnss_files-2.15.so
+7f9012afe000-7f9012aff000 rwxp 0000c000 08:03 496818                     /lib/libnss_files-2.15.so
+7f9012aff000-7f9012b00000 ---p 00000000 00:00 0 
+7f9012b00000-7f9013400000 rwxp 00000000 00:00 0 
+7f901343b000-7f9013440000 r-xp 00000000 08:03 154899                     /usr/lib/libXdmcp.so.6.0.0
+7f9013440000-7f901363f000 ---p 00005000 08:03 154899                     /usr/lib/libXdmcp.so.6.0.0
+7f901363f000-7f9013640000 r-xp 00004000 08:03 154899                     /usr/lib/libXdmcp.so.6.0.0
+7f9013640000-7f9013641000 rwxp 00005000 08:03 154899                     /usr/lib/libXdmcp.so.6.0.0
+7f9013641000-7f9013643000 r-xp 00000000 08:03 154902                     /usr/lib/libXau.so.6.0.0
+7f9013643000-7f9013843000 ---p 00002000 08:03 154902                     /usr/lib/libXau.so.6.0.0
+7f9013843000-7f9013844000 r-xp 00002000 08:03 154902                     /usr/lib/libXau.so.6.0.0
+7f9013844000-7f9013845000 rwxp 00003000 08:03 154902                     /usr/lib/libXau.so.6.0.0
+7f9013845000-7f9013862000 r-xp 00000000 08:03 154951                     /usr/lib/libxcb.so.1.1.0
+7f9013862000-7f9013a62000 ---p 0001d000 08:03 154951                     /usr/lib/libxcb.so.1.1.0
+7f9013a62000-7f9013a63000 rwxp 0001d000 08:03 154951                     /usr/lib/libxcb.so.1.1.0
+7f9013a63000-7f9013a8b000 r-xp 00000000 08:03 358767                     /usr/lib/libexpat.so.1.6.0
+7f9013a8b000-7f9013c8a000 ---p 00028000 08:03 358767                     /usr/lib/libexpat.so.1.6.0
+7f9013c8a000-7f9013c8c000 r-xp 00027000 08:03 358767                     /usr/lib/libexpat.so.1.6.0
+7f9013c8c000-7f9013c8d000 rwxp 00029000 08:03 358767                     /usr/lib/libexpat.so.1.6.0
+7f9013c8d000-7f9013c9c000 r-xp 00000000 08:03 496840                     /lib/libbz2.so.1.0.6
+7f9013c9c000-7f9013e9b000 ---p 0000f000 08:03 496840                     /lib/libbz2.so.1.0.6
+7f9013e9b000-7f9013e9d000 rwxp 0000e000 08:03 496840                     /lib/libbz2.so.1.0.6
+7f9013e9d000-7f9013f1e000 r-xp 00000000 08:03 155306                     /usr/lib/libpixman-1.so.0.24.4
+7f9013f1e000-7f901411e000 ---p 00081000 08:03 155306                     /usr/lib/libpixman-1.so.0.24.4
+7f901411e000-7f9014124000 r-xp 00081000 08:03 155306                     /usr/lib/libpixman-1.so.0.24.4
+7f9014124000-7f9014125000 rwxp 00087000 08:03 155306                     /usr/lib/libpixman-1.so.0.24.4
+7f9014125000-7f9014151000 r-xp 00000000 08:03 154867                     /usr/lib/libpng15.so.15.10.0
+7f9014151000-7f9014350000 ---p 0002c000 08:03 154867                     /usr/lib/libpng15.so.15.10.0
+7f9014350000-7f9014351000 r-xp 0002b000 08:03 154867                     /usr/lib/libpng15.so.15.10.0
+7f9014351000-7f9014352000 rwxp 0002c000 08:03 154867                     /usr/lib/libpng15.so.15.10.0
+7f9014352000-7f9014365000 r-xp 00000000 08:03 500688                     /lib/libresolv-2.15.so
+7f9014365000-7f9014565000 ---p 00013000 08:03 500688                     /lib/libresolv-2.15.so
+7f9014565000-7f9014566000 r-xp 00013000 08:03 500688                     /lib/libresolv-2.15.so
+7f9014566000-7f9014567000 rwxp 00014000 08:03 500688                     /lib/libresolv-2.15.so
+7f9014567000-7f9014569000 rwxp 00000000 00:00 0 
+7f9014569000-7f90145c2000 r-xp 00000000 08:03 361135                     /usr/lib/libpcre.so.1.0.0
+7f90145c2000-7f90147c1000 ---p 00059000 08:03 361135                     /usr/lib/libpcre.so.1.0.0
+7f90147c1000-7f90147c2000 r-xp 00058000 08:03 361135                     /usr/lib/libpcre.so.1.0.0
+7f90147c2000-7f90147c3000 rwxp 00059000 08:03 361135                     /usr/lib/libpcre.so.1.0.0
+7f90147c3000-7f90147ca000 r-xp 00000000 08:03 361228                     /usr/lib/libffi.so.5.0.10
+7f90147ca000-7f90149c9000 ---p 00007000 08:03 361228                     /usr/lib/libffi.so.5.0.10
+7f90149c9000-7f90149ca000 r-xp 00006000 08:03 361228                     /usr/lib/libffi.so.5.0.10
+7f90149ca000-7f90149cb000 rwxp 00007000 08:03 361228                     /usr/lib/libffi.so.5.0.10
+7f90149cb000-7f90149cd000 r-xp 00000000 08:03 155418                     /usr/lib/libXdamage.so.1.1.0
+7f90149cd000-7f9014bcc000 ---p 00002000 08:03 155418                     /usr/lib/libXdamage.so.1.1.0
+7f9014bcc000-7f9014bcd000 r-xp 00001000 08:03 155418                     /usr/lib/libXdamage.so.1.1.0
+7f9014bcd000-7f9014bce000 rwxp 00002000 08:03 155418                     /usr/lib/libXdamage.so.1.1.0
+7f9014bce000-7f9014bd0000 r-xp 00000000 08:03 155416                     /usr/lib/libXcomposite.so.1.0.0
+7f9014bd0000-7f9014dcf000 ---p 00002000 08:03 155416                     /usr/lib/libXcomposite.so.1.0.0
+7f9014dcf000-7f9014dd0000 r-xp 00001000 08:03 155416                     /usr/lib/libXcomposite.so.1.0.0
+7f9014dd0000-7f9014dd1000 rwxp 00002000 08:03 155416                     /usr/lib/libXcomposite.so.1.0.0
+7f9014dd1000-7f9014dda000 r-xp 00000000 08:03 155401                     /usr/lib/libXcursor.so.1.0.2
+7f9014dda000-7f9014fd9000 ---p 00009000 08:03 155401                     /usr/lib/libXcursor.so.1.0.2
+7f9014fd9000-7f9014fda000 r-xp 00008000 08:03 155401                     /usr/lib/libXcursor.so.1.0.2
+7f9014fda000-7f9014fdb000 rwxp 00009000 08:03 155401                     /usr/lib/libXcursor.so.1.0.2
+7f9014fdb000-7f9014fe3000 r-xp 00000000 08:03 155409                     /usr/lib/libXrandr.so.2.2.0
+7f9014fe3000-7f90151e2000 ---p 00008000 08:03 155409                     /usr/lib/libXrandr.so.2.2.0
+7f90151e2000-7f90151e3000 r-xp 00007000 08:03 155409                     /usr/lib/libXrandr.so.2.2.0
+7f90151e3000-7f90151e4000 rwxp 00008000 08:03 155409                     /usr/lib/libXrandr.so.2.2.0
+7f90151e4000-7f90151f2000 r-xp 00000000 08:03 155411                     /usr/lib/libXi.so.6.1.0
+7f90151f2000-7f90153f1000 ---p 0000e000 08:03 155411                     /usr/lib/libXi.so.6.1.0
+7f90153f1000-7f90153f2000 rwxp 0000d000 08:03 155411                     /usr/lib/libXi.so.6.1.0
+7f90153f2000-7f90153f4000 r-xp 00000000 08:03 155404                     /usr/lib/libXinerama.so.1.0.0
+7f90153f4000-7f90155f3000 ---p 00002000 08:03 155404                     /usr/lib/libXinerama.so.1.0.0
+7f90155f3000-7f90155f4000 r-xp 00001000 08:03 155404                     /usr/lib/libXinerama.so.1.0.0
+7f90155f4000-7f90155f5000 rwxp 00002000 08:03 155404                     /usr/lib/libXinerama.so.1.0.0
+7f90155f5000-7f90155ff000 r-xp 00000000 08:03 155295                     /usr/lib/libXrender.so.1.3.0
+7f90155ff000-7f90157fe000 ---p 0000a000 08:03 155295                     /usr/lib/libXrender.so.1.3.0
+7f90157fe000-7f90157ff000 r-xp 00009000 08:03 155295                     /usr/lib/libXrender.so.1.3.0
+7f90157ff000-7f9015800000 rwxp 0000a000 08:03 155295                     /usr/lib/libXrender.so.1.3.0
+7f9015800000-7f9015812000 r-xp 00000000 08:03 155121                     /usr/lib/libXext.so.6.4.0
+7f9015812000-7f9015a11000 ---p 00012000 08:03 155121                     /usr/lib/libXext.so.6.4.0
+7f9015a11000-7f9015a12000 r-xp 00011000 08:03 155121                     /usr/lib/libXext.so.6.4.0
+7f9015a12000-7f9015a13000 rwxp 00012000 08:03 155121                     /usr/lib/libXext.so.6.4.0
+7f9015a13000-7f9015a18000 r-xp 00000000 08:03 155399                     /usr/lib/libXfixes.so.3.1.0
+7f9015a18000-7f9015c18000 ---p 00005000 08:03 155399                     /usr/lib/libXfixes.so.3.1.0
+7f9015c18000-7f9015c19000 r-xp 00005000 08:03 155399                     /usr/lib/libXfixes.so.3.1.0
+7f9015c19000-7f9015c1a000 rwxp 00006000 08:03 155399                     /usr/lib/libXfixes.so.3.1.0
+7f9015c1a000-7f9015d4e000 r-xp 00000000 08:03 155001                     /usr/lib/libX11.so.6.3.0
+7f9015d4e000-7f9015f4e000 ---p 00134000 08:03 155001                     /usr/lib/libX11.so.6.3.0
+7f9015f4e000-7f9015f4f000 r-xp 00134000 08:03 155001                     /usr/lib/libX11.so.6.3.0
+7f9015f4f000-7f9015f54000 rwxp 00135000 08:03 155001                     /usr/lib/libX11.so.6.3.0
+7f9015f54000-7f90160eb000 r-xp 00000000 08:03 496812                     /lib/libc-2.15.so
+7f90160eb000-7f90162eb000 ---p 00197000 08:03 496812                     /lib/libc-2.15.so
+7f90162eb000-7f90162ef000 r-xp 00197000 08:03 496812                     /lib/libc-2.15.so
+7f90162ef000-7f90162f1000 rwxp 0019b000 08:03 496812                     /lib/libc-2.15.so
+7f90162f1000-7f90162f5000 rwxp 00000000 00:00 0 
+7f90162f5000-7f90163e8000 r-xp 00000000 08:03 496798                     /lib/libm-2.15.so
+7f90163e8000-7f90165e8000 ---p 000f3000 08:03 496798                     /lib/libm-2.15.so
+7f90165e8000-7f90165e9000 r-xp 000f3000 08:03 496798                     /lib/libm-2.15.so
+7f90165e9000-7f90165ea000 rwxp 000f4000 08:03 496798                     /lib/libm-2.15.so
+7f90165ea000-7f901664f000 r-xp 00000000 08:03 360875                     /usr/lib/libgmp.so.10.0.4
+7f901664f000-7f901684e000 ---p 00065000 08:03 360875                     /usr/lib/libgmp.so.10.0.4
+7f901684e000-7f901684f000 r-xp 00064000 08:03 360875                     /usr/lib/libgmp.so.10.0.4
+7f901684f000-7f9016858000 rwxp 00065000 08:03 360875                     /usr/lib/libgmp.so.10.0.4
+7f9016858000-7f901686d000 r-xp 00000000 08:03 360592                     /usr/lib/libz.so.1.2.6
+7f901686d000-7f9016a6c000 ---p 00015000 08:03 360592                     /usr/lib/libz.so.1.2.6
+7f9016a6c000-7f9016a6d000 r-xp 00014000 08:03 360592                     /usr/lib/libz.so.1.2.6
+7f9016a6d000-7f9016a6e000 rwxp 00015000 08:03 360592                     /usr/lib/libz.so.1.2.6
+7f9016a6e000-7f9016a85000 r-xp 00000000 08:03 496787                     /lib/libpthread-2.15.so
+7f9016a85000-7f9016c84000 ---p 00017000 08:03 496787                     /lib/libpthread-2.15.so
+7f9016c84000-7f9016c85000 r-xp 00016000 08:03 496787                     /lib/libpthread-2.15.so
+7f9016c85000-7f9016c86000 rwxp 00017000 08:03 496787                     /lib/libpthread-2.15.so
+7f9016c86000-7f9016c8a000 rwxp 00000000 00:00 0 
+7f9016c8a000-7f9016c8d000 r-xp 00000000 08:03 496797                     /lib/libdl-2.15.so
+7f9016c8d000-7f9016e8c000 ---p 00003000 08:03 496797                     /lib/libdl-2.15.so
+7f9016e8c000-7f9016e8d000 r-xp 00002000 08:03 496797                     /lib/libdl-2.15.so
+7f9016e8d000-7f9016e8e000 rwxp 00003000 08:03 496797                     /lib/libdl-2.15.so
+7f9016e8e000-7f9016e90000 r-xp 00000000 08:03 496824                     /lib/libutil-2.15.so
+7f9016e90000-7f901708f000 ---p 00002000 08:03 496824                     /lib/libutil-2.15.so
+7f901708f000-7f9017090000 r-xp 00001000 08:03 496824                     /lib/libutil-2.15.so
+7f9017090000-7f9017091000 rwxp 00002000 08:03 496824                     /lib/libutil-2.15.so
+7f9017091000-7f9017184000 r-xp 00000000 08:03 361235                     /usr/lib/libglib-2.0.so.0.3000.2
+7f9017184000-7f9017383000 ---p 000f3000 08:03 361235                     /usr/lib/libglib-2.0.so.0.3000.2
+7f9017383000-7f9017384000 r-xp 000f2000 08:03 361235                     /usr/lib/libglib-2.0.so.0.3000.2
+7f9017384000-7f9017385000 rwxp 000f3000 08:03 361235                     /usr/lib/libglib-2.0.so.0.3000.2
+7f9017385000-7f9017386000 rwxp 00000000 00:00 0 
+7f9017386000-7f901738d000 r-xp 00000000 08:03 496790                     /lib/librt-2.15.so
+7f901738d000-7f901758c000 ---p 00007000 08:03 496790                     /lib/librt-2.15.so
+7f901758c000-7f901758d000 r-xp 00006000 08:03 496790                     /lib/librt-2.15.so
+7f901758d000-7f901758e000 rwxp 00007000 08:03 496790                     /lib/librt-2.15.so
+7f901758e000-7f9017592000 r-xp 00000000 08:03 361236                     /usr/lib/libgthread-2.0.so.0.3000.2
+Neúspěšně ukončen (SIGABRT)
+
+-----------------------------------------------------------------------------------
+$ ./grid_edit examplegrid.grid-haskell 
+"length"
+0
+"n"
+20
+4
+"length"
+0
+"n"
+20
+4
+"length"
+0
+"n"
+20
+4
+"length"
+0
+"n"
+20
+3
+"length"
+0
+"n"
+20
+3
+"length"
+0
+"n"
+20
+3
+*** glibc detected *** ./grid_edit: realloc(): invalid next size: 0x00007f8d000098e0 ***
+======= Backtrace: =========
+/lib/libc.so.6(+0x78a56)[0x7f8d0fe21a56]
+/lib/libc.so.6(+0x7b646)[0x7f8d0fe24646]
+/lib/libc.so.6(realloc+0xed)[0x7f8d0fe2614d]
+/usr/lib/libglib-2.0.so.0(g_realloc+0x31)[0x7f8d10f31581]
+/usr/lib/libgdk-x11-2.0.so.0(+0x32e52)[0x7f8d12ff7e52]
+/usr/lib/libgdk-x11-2.0.so.0(+0x33e1d)[0x7f8d12ff8e1d]
+/usr/lib/libgdk-x11-2.0.so.0(gdk_region_union+0x97)[0x7f8d12ff9487]
+/usr/lib/libgdk-x11-2.0.so.0(+0x3dfe7)[0x7f8d13002fe7]
+/usr/lib/libgdk-x11-2.0.so.0(+0x3e193)[0x7f8d13003193]
+/usr/lib/libgtk-x11-2.0.so.0(gtk_widget_queue_draw_area+0x19a)[0x7f8d134c7d0a]
+/usr/lib/libgtk-x11-2.0.so.0(gtk_widget_queue_draw+0x73)[0x7f8d134cf073]
+/usr/lib/libgtk-x11-2.0.so.0(+0xca24e)[0x7f8d1334224e]
+/usr/lib/libgtk-x11-2.0.so.0(+0x1360f8)[0x7f8d133ae0f8]
+/usr/lib/libgobject-2.0.so.0(g_closure_invoke+0x154)[0x7f8d117fb0e4]
+/usr/lib/libgobject-2.0.so.0(+0x20e9f)[0x7f8d1180ce9f]
+/usr/lib/libgobject-2.0.so.0(g_signal_emit_valist+0x623)[0x7f8d118164c3]
+/usr/lib/libgobject-2.0.so.0(g_signal_emit+0x82)[0x7f8d11816892]
+/usr/lib/libgtk-x11-2.0.so.0(+0x24f171)[0x7f8d134c7171]
+/usr/lib/libgtk-x11-2.0.so.0(gtk_widget_send_focus_change+0xb1)[0x7f8d134d3d61]
+/usr/lib/libgtk-x11-2.0.so.0(+0x25bf92)[0x7f8d134d3f92]
+/usr/lib/libgtk-x11-2.0.so.0(+0x25c81a)[0x7f8d134d481a]
+/usr/lib/libgobject-2.0.so.0(g_closure_invoke+0x154)[0x7f8d117fb0e4]
+/usr/lib/libgobject-2.0.so.0(+0x20e9f)[0x7f8d1180ce9f]
+/usr/lib/libgobject-2.0.so.0(g_signal_emit_valist+0x851)[0x7f8d118166f1]
+/usr/lib/libgobject-2.0.so.0(g_signal_emit+0x82)[0x7f8d11816892]
+/usr/lib/libgtk-x11-2.0.so.0(+0x263e0d)[0x7f8d134dbe0d]
+/usr/lib/libgtk-x11-2.0.so.0(gtk_widget_unparent+0x393)[0x7f8d134cc1a3]
+/usr/lib/libgtk-x11-2.0.so.0(+0x837c5)[0x7f8d132fb7c5]
+/usr/lib/libgobject-2.0.so.0(g_closure_invoke+0x154)[0x7f8d117fb0e4]
+/usr/lib/libgobject-2.0.so.0(+0x2085a)[0x7f8d1180c85a]
+/usr/lib/libgobject-2.0.so.0(g_signal_emit_valist+0x851)[0x7f8d118166f1]
+/usr/lib/libgobject-2.0.so.0(g_signal_emit+0x82)[0x7f8d11816892]
+./grid_edit[0x5abc4f]
+======= Memory map: ========
+00400000-006c1000 r-xp 00000000 08:04 6951483                            /home/timothy/works/current/grid haskell/grid_edit
+008c0000-008dc000 rwxp 002c0000 08:04 6951483                            /home/timothy/works/current/grid haskell/grid_edit
+008dc000-008e5000 rwxp 00000000 00:00 0 
+01bc6000-01dd3000 rwxp 00000000 00:00 0                                  [heap]
+7f8cf0000000-7f8cf0021000 rwxp 00000000 00:00 0 
+7f8cf0021000-7f8cf4000000 ---p 00000000 00:00 0 
+7f8cf8000000-7f8cf808e000 rwxp 00000000 00:00 0 
+7f8cf808e000-7f8cfc000000 ---p 00000000 00:00 0 
+7f8cfc000000-7f8cfc021000 rwxp 00000000 00:00 0 
+7f8cfc021000-7f8d00000000 ---p 00000000 00:00 0 
+7f8d00000000-7f8d00021000 rwxp 00000000 00:00 0 
+7f8d00021000-7f8d04000000 ---p 00000000 00:00 0 
+7f8d05ffc000-7f8d05ffd000 ---p 00000000 00:00 0 
+7f8d05ffd000-7f8d067fd000 rwxp 00000000 00:00 0 
+7f8d067fd000-7f8d067fe000 ---p 00000000 00:00 0 
+7f8d067fe000-7f8d06ffe000 rwxp 00000000 00:00 0 
+7f8d06ffe000-7f8d06fff000 ---p 00000000 00:00 0 
+7f8d06fff000-7f8d077ff000 rwxp 00000000 00:00 0 
+7f8d077ff000-7f8d07800000 ---p 00000000 00:00 0 
+7f8d07800000-7f8d08000000 rwxp 00000000 00:00 0 
+7f8d08000000-7f8d08021000 rwxp 00000000 00:00 0 
+7f8d08021000-7f8d0c000000 ---p 00000000 00:00 0 
+7f8d0c2eb000-7f8d0c300000 r-xp 00000000 08:03 358801                     /usr/lib/libgcc_s.so.1
+7f8d0c300000-7f8d0c4ff000 ---p 00015000 08:03 358801                     /usr/lib/libgcc_s.so.1
+7f8d0c4ff000-7f8d0c500000 rwxp 00014000 08:03 358801                     /usr/lib/libgcc_s.so.1
+7f8d0c500000-7f8d0c600000 rwxp 00000000 00:00 0 
+7f8d0c642000-7f8d0c6f2000 r-xp 00000000 08:03 538291                     /usr/share/fonts/TTF/DejaVuSans.ttf
+7f8d0c6f2000-7f8d0c6fe000 r-xp 00000000 08:03 496818                     /lib/libnss_files-2.15.so
+7f8d0c6fe000-7f8d0c8fd000 ---p 0000c000 08:03 496818                     /lib/libnss_files-2.15.so
+7f8d0c8fd000-7f8d0c8fe000 r-xp 0000b000 08:03 496818                     /lib/libnss_files-2.15.so
+7f8d0c8fe000-7f8d0c8ff000 rwxp 0000c000 08:03 496818                     /lib/libnss_files-2.15.so
+7f8d0c8ff000-7f8d0c900000 ---p 00000000 00:00 0 
+7f8d0c900000-7f8d0d200000 rwxp 00000000 00:00 0 
+7f8d0d230000-7f8d0d290000 rwxs 00000000 00:04 23232522                   /SYSV00000000 (deleted)
+7f8d0d290000-7f8d0d295000 r-xp 00000000 08:03 154899                     /usr/lib/libXdmcp.so.6.0.0
+7f8d0d295000-7f8d0d494000 ---p 00005000 08:03 154899                     /usr/lib/libXdmcp.so.6.0.0
+7f8d0d494000-7f8d0d495000 r-xp 00004000 08:03 154899                     /usr/lib/libXdmcp.so.6.0.0
+7f8d0d495000-7f8d0d496000 rwxp 00005000 08:03 154899                     /usr/lib/libXdmcp.so.6.0.0
+7f8d0d496000-7f8d0d498000 r-xp 00000000 08:03 154902                     /usr/lib/libXau.so.6.0.0
+7f8d0d498000-7f8d0d698000 ---p 00002000 08:03 154902                     /usr/lib/libXau.so.6.0.0
+7f8d0d698000-7f8d0d699000 r-xp 00002000 08:03 154902                     /usr/lib/libXau.so.6.0.0
+7f8d0d699000-7f8d0d69a000 rwxp 00003000 08:03 154902                     /usr/lib/libXau.so.6.0.0
+7f8d0d69a000-7f8d0d6b7000 r-xp 00000000 08:03 154951                     /usr/lib/libxcb.so.1.1.0
+7f8d0d6b7000-7f8d0d8b7000 ---p 0001d000 08:03 154951                     /usr/lib/libxcb.so.1.1.0
+7f8d0d8b7000-7f8d0d8b8000 rwxp 0001d000 08:03 154951                     /usr/lib/libxcb.so.1.1.0
+7f8d0d8b8000-7f8d0d8e0000 r-xp 00000000 08:03 358767                     /usr/lib/libexpat.so.1.6.0
+7f8d0d8e0000-7f8d0dadf000 ---p 00028000 08:03 358767                     /usr/lib/libexpat.so.1.6.0
+7f8d0dadf000-7f8d0dae1000 r-xp 00027000 08:03 358767                     /usr/lib/libexpat.so.1.6.0
+7f8d0dae1000-7f8d0dae2000 rwxp 00029000 08:03 358767                     /usr/lib/libexpat.so.1.6.0
+7f8d0dae2000-7f8d0daf1000 r-xp 00000000 08:03 496840                     /lib/libbz2.so.1.0.6
+7f8d0daf1000-7f8d0dcf0000 ---p 0000f000 08:03 496840                     /lib/libbz2.so.1.0.6
+7f8d0dcf0000-7f8d0dcf2000 rwxp 0000e000 08:03 496840                     /lib/libbz2.so.1.0.6
+7f8d0dcf2000-7f8d0dd73000 r-xp 00000000 08:03 155306                     /usr/lib/libpixman-1.so.0.24.4
+7f8d0dd73000-7f8d0df73000 ---p 00081000 08:03 155306                     /usr/lib/libpixman-1.so.0.24.4
+7f8d0df73000-7f8d0df79000 r-xp 00081000 08:03 155306                     /usr/lib/libpixman-1.so.0.24.4
+7f8d0df79000-7f8d0df7a000 rwxp 00087000 08:03 155306                     /usr/lib/libpixman-1.so.0.24.4
+7f8d0df7a000-7f8d0dfa6000 r-xp 00000000 08:03 154867                     /usr/lib/libpng15.so.15.10.0
+7f8d0dfa6000-7f8d0e1a5000 ---p 0002c000 08:03 154867                     /usr/lib/libpng15.so.15.10.0
+7f8d0e1a5000-7f8d0e1a6000 r-xp 0002b000 08:03 154867                     /usr/lib/libpng15.so.15.10.0
+7f8d0e1a6000-7f8d0e1a7000 rwxp 0002c000 08:03 154867                     /usr/lib/libpng15.so.15.10.0
+7f8d0e1a7000-7f8d0e1ba000 r-xp 00000000 08:03 500688                     /lib/libresolv-2.15.so
+7f8d0e1ba000-7f8d0e3ba000 ---p 00013000 08:03 500688                     /lib/libresolv-2.15.so
+7f8d0e3ba000-7f8d0e3bb000 r-xp 00013000 08:03 500688                     /lib/libresolv-2.15.so
+7f8d0e3bb000-7f8d0e3bc000 rwxp 00014000 08:03 500688                     /lib/libresolv-2.15.so
+7f8d0e3bc000-7f8d0e3be000 rwxp 00000000 00:00 0 
+7f8d0e3be000-7f8d0e417000 r-xp 00000000 08:03 361135                     /usr/lib/libpcre.so.1.0.0
+7f8d0e417000-7f8d0e616000 ---p 00059000 08:03 361135                     /usr/lib/libpcre.so.1.0.0
+7f8d0e616000-7f8d0e617000 r-xp 00058000 08:03 361135                     /usr/lib/libpcre.so.1.0.0
+7f8d0e617000-7f8d0e618000 rwxp 00059000 08:03 361135                     /usr/lib/libpcre.so.1.0.0
+7f8d0e618000-7f8d0e61f000 r-xp 00000000 08:03 361228                     /usr/lib/libffi.so.5.0.10
+7f8d0e61f000-7f8d0e81e000 ---p 00007000 08:03 361228                     /usr/lib/libffi.so.5.0.10
+7f8d0e81e000-7f8d0e81f000 r-xp 00006000 08:03 361228                     /usr/lib/libffi.so.5.0.10
+7f8d0e81f000-7f8d0e820000 rwxp 00007000 08:03 361228                     /usr/lib/libffi.so.5.0.10
+7f8d0e820000-7f8d0e822000 r-xp 00000000 08:03 155418                     /usr/lib/libXdamage.so.1.1.0
+7f8d0e822000-7f8d0ea21000 ---p 00002000 08:03 155418                     /usr/lib/libXdamage.so.1.1.0
+7f8d0ea21000-7f8d0ea22000 r-xp 00001000 08:03 155418                     /usr/lib/libXdamage.so.1.1.0
+7f8d0ea22000-7f8d0ea23000 rwxp 00002000 08:03 155418                     /usr/lib/libXdamage.so.1.1.0
+7f8d0ea23000-7f8d0ea25000 r-xp 00000000 08:03 155416                     /usr/lib/libXcomposite.so.1.0.0
+7f8d0ea25000-7f8d0ec24000 ---p 00002000 08:03 155416                     /usr/lib/libXcomposite.so.1.0.0
+7f8d0ec24000-7f8d0ec25000 r-xp 00001000 08:03 155416                     /usr/lib/libXcomposite.so.1.0.0
+7f8d0ec25000-7f8d0ec26000 rwxp 00002000 08:03 155416                     /usr/lib/libXcomposite.so.1.0.0
+7f8d0ec26000-7f8d0ec2f000 r-xp 00000000 08:03 155401                     /usr/lib/libXcursor.so.1.0.2
+7f8d0ec2f000-7f8d0ee2e000 ---p 00009000 08:03 155401                     /usr/lib/libXcursor.so.1.0.2
+7f8d0ee2e000-7f8d0ee2f000 r-xp 00008000 08:03 155401                     /usr/lib/libXcursor.so.1.0.2
+7f8d0ee2f000-7f8d0ee30000 rwxp 00009000 08:03 155401                     /usr/lib/libXcursor.so.1.0.2
+7f8d0ee30000-7f8d0ee38000 r-xp 00000000 08:03 155409                     /usr/lib/libXrandr.so.2.2.0
+7f8d0ee38000-7f8d0f037000 ---p 00008000 08:03 155409                     /usr/lib/libXrandr.so.2.2.0
+7f8d0f037000-7f8d0f038000 r-xp 00007000 08:03 155409                     /usr/lib/libXrandr.so.2.2.0
+7f8d0f038000-7f8d0f039000 rwxp 00008000 08:03 155409                     /usr/lib/libXrandr.so.2.2.0
+7f8d0f039000-7f8d0f047000 r-xp 00000000 08:03 155411                     /usr/lib/libXi.so.6.1.0
+7f8d0f047000-7f8d0f246000 ---p 0000e000 08:03 155411                     /usr/lib/libXi.so.6.1.0
+7f8d0f246000-7f8d0f247000 rwxp 0000d000 08:03 155411                     /usr/lib/libXi.so.6.1.0
+7f8d0f247000-7f8d0f249000 r-xp 00000000 08:03 155404                     /usr/lib/libXinerama.so.1.0.0
+7f8d0f249000-7f8d0f448000 ---p 00002000 08:03 155404                     /usr/lib/libXinerama.so.1.0.0
+7f8d0f448000-7f8d0f449000 r-xp 00001000 08:03 155404                     /usr/lib/libXinerama.so.1.0.0
+7f8d0f449000-7f8d0f44a000 rwxp 00002000 08:03 155404                     /usr/lib/libXinerama.so.1.0.0
+7f8d0f44a000-7f8d0f454000 r-xp 00000000 08:03 155295                     /usr/lib/libXrender.so.1.3.0
+7f8d0f454000-7f8d0f653000 ---p 0000a000 08:03 155295                     /usr/lib/libXrender.so.1.3.0
+7f8d0f653000-7f8d0f654000 r-xp 00009000 08:03 155295                     /usr/lib/libXrender.so.1.3.0
+7f8d0f654000-7f8d0f655000 rwxp 0000a000 08:03 155295                     /usr/lib/libXrender.so.1.3.0
+7f8d0f655000-7f8d0f667000 r-xp 00000000 08:03 155121                     /usr/lib/libXext.so.6.4.0
+7f8d0f667000-7f8d0f866000 ---p 00012000 08:03 155121                     /usr/lib/libXext.so.6.4.0
+7f8d0f866000-7f8d0f867000 r-xp 00011000 08:03 155121                     /usr/lib/libXext.so.6.4.0
+7f8d0f867000-7f8d0f868000 rwxp 00012000 08:03 155121                     /usr/lib/libXext.so.6.4.0
+7f8d0f868000-7f8d0f86d000 r-xp 00000000 08:03 155399                     /usr/lib/libXfixes.so.3.1.0
+7f8d0f86d000-7f8d0fa6d000 ---p 00005000 08:03 155399                     /usr/lib/libXfixes.so.3.1.0
+7f8d0fa6d000-7f8d0fa6e000 r-xp 00005000 08:03 155399                     /usr/lib/libXfixes.so.3.1.0
+7f8d0fa6e000-7f8d0fa6f000 rwxp 00006000 08:03 155399                     /usr/lib/libXfixes.so.3.1.0
+7f8d0fa6f000-7f8d0fba3000 r-xp 00000000 08:03 155001                     /usr/lib/libX11.so.6.3.0
+7f8d0fba3000-7f8d0fda3000 ---p 00134000 08:03 155001                     /usr/lib/libX11.so.6.3.0
+7f8d0fda3000-7f8d0fda4000 r-xp 00134000 08:03 155001                     /usr/lib/libX11.so.6.3.0
+7f8d0fda4000-7f8d0fda9000 rwxp 00135000 08:03 155001                     /usr/lib/libX11.so.6.3.0
+7f8d0fda9000-7f8d0ff40000 r-xp 00000000 08:03 496812                     /lib/libc-2.15.so
+7f8d0ff40000-7f8d10140000 ---p 00197000 08:03 496812                     /lib/libc-2.15.so
+7f8d10140000-7f8d10144000 r-xp 00197000 08:03 496812                     /lib/libc-2.15.so
+7f8d10144000-7f8d10146000 rwxp 0019b000 08:03 496812                     /lib/libc-2.15.so
+7f8d10146000-7f8d1014a000 rwxp 00000000 00:00 0 
+7f8d1014a000-7f8d1023d000 r-xp 00000000 08:03 496798                     /lib/libm-2.15.so
+7f8d1023d000-7f8d1043d000 ---p 000f3000 08:03 496798                     /lib/libm-2.15.so
+7f8d1043d000-7f8d1043e000 r-xp 000f3000 08:03 496798                     /lib/libm-2.15.so
+7f8d1043e000-7f8d1043f000 rwxp 000f4000 08:03 496798                     /lib/libm-2.15.so
+7f8d1043f000-7f8d104a4000 r-xp 00000000 08:03 360875                     /usr/lib/libgmp.so.10.0.4
+7f8d104a4000-7f8d106a3000 ---p 00065000 08:03 360875                     /usr/lib/libgmp.so.10.0.4
+7f8d106a3000-7f8d106a4000 r-xp 00064000 08:03 360875                     /usr/lib/libgmp.so.10.0.4
+7f8d106a4000-7f8d106ad000 rwxp 00065000 08:03 360875                     /usr/lib/libgmp.so.10.0.4
+7f8d106ad000-7f8d106c2000 r-xp 00000000 08:03 360592                     /usr/lib/libz.so.1.2.6
+7f8d106c2000-7f8d108c1000 ---p 00015000 08:03 360592                     /usr/lib/libz.so.1.2.6
+7f8d108c1000-7f8d108c2000 r-xp 00014000 08:03 360592                     /usr/lib/libz.so.1.2.6
+7f8d108c2000-7f8d108c3000 rwxp 00015000 08:03 360592                     /usr/lib/libz.so.1.2.6
+7f8d108c3000-7f8d108da000 r-xp 00000000 08:03 496787                     /lib/libpthread-2.15.so
+7f8d108da000-7f8d10ad9000 ---p 00017000 08:03 496787                     /lib/libpthread-2.15.so
+7f8d10ad9000-7f8d10ada000 r-xp 00016000 08:03 496787                     /lib/libpthread-2.15.so
+7f8d10ada000-7f8d10adb000 rwxp 00017000 08:03 496787                     /lib/libpthread-2.15.so
+7f8d10adb000-7f8d10adf000 rwxp 00000000 00:00 0 
+7f8d10adf000-7f8d10ae2000 r-xp 00000000 08:03 496797                     /lib/libdl-2.15.so
+7f8d10ae2000-7f8d10ce1000 ---p 00003000 08:03 496797                     /lib/libdl-2.15.so
+7f8d10ce1000-7f8d10ce2000 r-xp 00002000 08:03 496797                     /lib/libdl-2.15.so
+7f8d10ce2000-7f8d10ce3000 rwxp 00003000 08:03 496797                     /lib/libdl-2.15.soNeúspěšně ukončen (SIGABRT)
