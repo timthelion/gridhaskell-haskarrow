@@ -37,5 +37,9 @@ This is a special file saving object.  Put a string in it, and it will get saved
 
 > filePathObject :: ThreadObject FilePath (),
 
-> gridRecords :: StateRecords3 Grid (Maybe DisplayCell.DisplayCell) Rectangle () () ()
+> gridRecords :: StateRecords Grid (RecorderSignal ()),
+
+> focusedCellRecords :: StateRecords (Maybe DisplayCell.DisplayCell) (),
+
+> focusedRectangleRecords :: StateRecords Rectangle ()
 >}

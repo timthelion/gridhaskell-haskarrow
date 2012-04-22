@@ -125,7 +125,6 @@ action v1 v2 v3 = (v3,(v2,(v1)))
 > (\a -> do
 >  updateReturning to $ action a)
 
-
 >updateHelper :: a -> b -> MVar a -> (a -> b -> IO (a,b)) -> IO b
 >updateHelper a b aMVar action = do
 >    (a',b') <- action a b

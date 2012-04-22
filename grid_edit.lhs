@@ -71,9 +71,11 @@ Special MVar used to quit.  Put a value here when you want to terminate.
 >     filePathObject'         <- threadObject
 >     reFocusNeededObject'    <- threadObject
 
->     gridRecords'            <- stateRecords3 gridObject' focusedCellObject' focusedRectangleObject'
+>     gridRecords'            <- stateRecords gridObject' 
+>     focusedCellRecords'     <- stateRecords focusedCellObject'
+>     focusedRectangleRecords'<- stateRecords focusedRectangleObject'
 
->     editorObjects <- return (GridEditorObjects gridObject' canvasObject' editModeObject' focusedCellObject' focusedRectangleObject' reFocusNeededObject' fileObject' filePathObject' gridRecords')
+>     editorObjects <- return (GridEditorObjects gridObject' canvasObject' editModeObject' focusedCellObject' focusedRectangleObject' reFocusNeededObject' fileObject' filePathObject' gridRecords' focusedCellRecords' focusedRectangleRecords')
 
 >     myWidgets <- loadWidgets gridEditWindowEvent editorObjects
 >     (window,_,canvas,scrwinContainer,_,cellInfo,modeInfo) <- return myWidgets
@@ -106,8 +108,12 @@ This is as good a time as any to record the state of our grid.  We will keep at 
 >   case signal of
 >     Just (RecorderSignal False Nothing) ->
 >       return ()
->     Nothing ->
->       recordState3 20 (gridRecords editorObjects) mygrid
+>     Nothing -> do
+>       focusedCell <- getObjectValue (focusedCellObject editorObjects)
+>       focusedRectangle <- getObjectValue (focusedRectangleObject editorObjects)
+>       recordState 20 (gridRecords editorObjects) mygrid
+>       recordState 20 (focusedCellRecords editorObjects) focusedCell
+>       recordState 20 (focusedRectangleRecords editorObjects) focusedRectangle
 
 We'll want to restore our scroll location(if possible) after we're done updating.
 
@@ -294,8 +300,9 @@ No need to finish the pattern with a Nothing, tryEvent will catch the exception.
 
 >             ([Control],"z")  -> 
 >              liftIO $ do
->                success <- undoStateAction3 (gridRecords editorObjects)
->                print success
+>                undoStateAction (focusedCellRecords editorObjects)
+>                undoStateAction (focusedRectangleRecords editorObjects)
+>                undoStateActionOfRecorder (gridRecords editorObjects)
 >                return True
                
 >             otherwise -> return False
