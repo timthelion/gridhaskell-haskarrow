@@ -22,51 +22,59 @@ update takes two arguments.  The object, and a pure haskell function which updat
 
 The bind/sync function, and the updateIO functions are NOT thread safe, or even thread aware, however.  Be carefull of these.
 
->data ThreadObject a = ThreadObject{
->           tickerMVar     :: MVar (ActionType a)}
+>data ThreadObject a signal = ThreadObject{
+>           tickerMVar     :: MVar (ActionType a signal)}
 
->data ActionType a = IOAction (a -> IO a) | PureAction (a -> a)| SetSyncOnGet (a -> IO a) | SetSyncOnPut (a -> IO ()) | GetObjectValueIO (a -> IO ()) | FreeObject
+>data ActionType a signal = IOAction (a -> IO a) (Maybe signal) | PureAction (a -> a) (Maybe signal)| SetSyncOnGet (a -> IO a) | SetSyncOnPut (a -> (Maybe signal) -> IO ()) | GetObjectValueIO (a -> IO ()) | FreeObject
 
->threadObject :: IO (ThreadObject a) 
+>threadObject :: IO (ThreadObject a signal)
 
 >threadObject = do
 >    tickerMVar    <- newEmptyMVar
 >    return (ThreadObject tickerMVar)
 
->objectInit :: ThreadObject a -> a -> (a -> IO a) -> (a -> IO ()) -> Bool -> IO ()
+>objectInit :: ThreadObject a signal -> a -> (a -> IO a) -> (a -> (Maybe signal) -> IO ()) -> Bool -> IO ()
 >objectInit to value syncOnGet syncOnPut wait = do
->    forkIO $ loopObject to syncOnGet syncOnPut value wait
+>    forkIO $ loopObject to syncOnGet syncOnPut value wait Nothing
 >    return ()
 
->loopObject :: ThreadObject a -> (a -> IO a) -> (a -> IO ()) -> a -> Bool -> IO ()
->loopObject  to@(ThreadObject tickerMVar)  syncOnGet syncOnPut value wait = do
+>loopObject :: ThreadObject a signal -> (a -> IO a) -> (a -> (Maybe signal) -> IO ()) -> a -> Bool -> (Maybe signal) -> IO ()
+>loopObject  to@(ThreadObject tickerMVar)  syncOnGet syncOnPut value wait signal = do
 >   if not wait
->   then syncOnPut value
+>   then syncOnPut value signal
 >   else return ()
 >   actionType <- takeMVar tickerMVar
 >   case actionType of
->         IOAction   action        -> do
+>         PureAction action signal -> do
+>                          value'  <- syncOnGet value
+>                          loopObject to syncOnGet syncOnPut (action value') False signal
+>         IOAction   action signal -> do
 >                          value'  <- syncOnGet value
 >                          value'' <- action value'
->                          loopObject to syncOnGet syncOnPut value'' False
->         PureAction action        -> do
->                          value'  <- syncOnGet value
->                          loopObject to syncOnGet syncOnPut (action value') False
+>                          loopObject to syncOnGet syncOnPut value'' False signal
 >         GetObjectValueIO getter  -> do
 >                          value'  <- syncOnGet value
 >                          getter value'
->                          loopObject to syncOnGet syncOnPut value' True 
+>                          loopObject to syncOnGet syncOnPut value' True Nothing
 >         SetSyncOnGet syncOnGet'  -> do
->                       loopObject to syncOnGet' syncOnPut value False 
+>                       loopObject to syncOnGet' syncOnPut value False Nothing
 >         SetSyncOnPut syncOnPut'  -> do
->                       loopObject to syncOnGet syncOnPut' value False
+>                       loopObject to syncOnGet syncOnPut' value False Nothing
 >         FreeObject   ->    return ()
 
->update :: ThreadObject a -> (a -> a) -> IO ()
->update (ThreadObject tickerMVar) action = do
->    putMVar tickerMVar (PureAction action)
+>update :: ThreadObject a signal -> (a -> a) -> IO ()
+>update to action = do
+>    updateWithSignal' to action Nothing
 
->updateReturning :: ThreadObject a -> (a -> (a,b)) -> IO b
+>updateWithSignal :: ThreadObject a signal -> (a -> a) -> signal -> IO ()
+>updateWithSignal to action signal = do
+>    updateWithSignal' to action (Just signal)
+
+>updateWithSignal' :: ThreadObject a signal -> (a -> a) -> (Maybe signal) -> IO ()
+>updateWithSignal' (ThreadObject tickerMVar) action signal = do
+>    putMVar tickerMVar (PureAction action signal)
+
+>updateReturning :: ThreadObject a signal -> (a -> (a,b)) -> IO b
 >updateReturning to action = do
 >  returnValueMVar <- newEmptyMVar
 >  updateIO to (\value -> do
@@ -75,44 +83,61 @@ The bind/sync function, and the updateIO functions are NOT thread safe, or even 
 >   return value')
 >  takeMVar returnValueMVar
 
->update2 :: ThreadObject a -> ThreadObject b -> (a -> b -> (a,b)) -> IO ()
->update2 to1 to2 action = do
->  value1MVar <- newEmptyMVar
->  updateIO to1 (\value1 -> do
->   updateIO to2 (\value2 -> do
->    update2helper value1 value2 value1MVar action);
->    takeMVar value1MVar)
+>updateIOReturning :: ThreadObject a signal -> (a -> IO (a,b)) -> IO b
+>updateIOReturning to action = do
+>  returnValueMVar <- newEmptyMVar
+>  updateIO to (\value -> do
+>   (value',returnValue) <- action value
+>   putMVar returnValueMVar returnValue
+>   return value')
+>  takeMVar returnValueMVar
 
->update2helper :: a -> b -> MVar a -> (a -> b -> (a,b)) -> IO b
->update2helper a b aMVar action =
->  let (a',b') = action a b in do
+f :: (a -> IO (a,b)) -> IO b
+f action = do
+ (a',b) <- action 1
+ print a'
+ return b
+
+f $ f $ f (\a b c->return (a,(b,c)))
+
+mainthread:
+updateMulti to1 $ alsoUpdate to2 $ finallyUpdate to3 (\c b a -> (c,(b,a)))
+to1:
+value' <- action value -- action :: t1 -> IO t1
+to2:                                      ^ putMVar v1MVar
+value' <-action value  -- action :: t2 -> IO t2
+to3:                                      ^ putMVar v2MVar
+value' <-action value  -- action :: t3 -> IO t3
+
+action v1 v2 v3 = (v3,(v2,(v1)))
+
+>updateMulti :: ThreadObject a signalA -> (a -> IO a) -> IO ()
+>updateMulti to action = do
+>  updateIO to action
+
+>alsoUpdate :: ThreadObject a signal -> (t -> a -> IO (a, b)) -> t -> IO b
+>alsoUpdate to action = 
+> (\a -> do
+>  updateIOReturning to $ action a)
+
+>finallyUpdate :: ThreadObject a signal -> (t -> a -> (a, b)) -> t -> IO b
+>finallyUpdate to action = do
+> (\a -> do
+>  updateReturning to $ action a)
+
+
+>updateHelper :: a -> b -> MVar a -> (a -> b -> IO (a,b)) -> IO b
+>updateHelper a b aMVar action = do
+>    (a',b') <- action a b
 >    putMVar aMVar a'
 >    return b'
 
->update3 :: ThreadObject a -> ThreadObject b -> ThreadObject c -> (a -> b-> c -> (a,b,c)) -> IO ()
->update3 to1 to2 to3 action = do
->  value1MVar <- newEmptyMVar
->  value2MVar <- newEmptyMVar
->  updateIO to1 (\value1 -> do
->   updateIO to2 (\value2 -> do
->    updateIO to3 (\value3 -> do
->     update3helper value1 value2 value3 value1MVar value2MVar action);
->    takeMVar value2MVar)
->   takeMVar value1MVar)
-
->update3helper :: a -> b -> c -> MVar a -> MVar b -> (a -> b -> c -> (a,b,c)) -> IO c
->update3helper a b c aMVar bMVar action =
->  let (a',b',c') = action a b c in do
->    putMVar aMVar a'
->    putMVar bMVar b'
->    return c'
-
->updateWith :: ThreadObject a -> ThreadObject b -> (a -> b -> b) -> IO ()
+>updateWith :: ThreadObject a signalA -> ThreadObject b signalB -> (a -> b -> b) -> IO ()
 >updateWith to1 to2 action = do
 > value1 <- getObjectValue to1
 > update to2 (action value1)
 
->updateWith2 :: ThreadObject a -> ThreadObject b -> ThreadObject c -> (a -> b -> c -> c) -> IO ()
+>updateWith2 :: ThreadObject a signalA -> ThreadObject b signalB -> ThreadObject c signalC -> (a -> b -> c -> c) -> IO ()
 >updateWith2 to1 to2 to3 action = do
 > value1 <- getObjectValue to1
 > value2 <- getObjectValue to2
@@ -120,42 +145,42 @@ The bind/sync function, and the updateIO functions are NOT thread safe, or even 
 
 | updateIO blocks by default.  Use updateIONoBlock if you don't want this to be the case.
 
->updateIO :: ThreadObject a -> (a -> IO a) -> IO ()
+>updateIO :: ThreadObject a signalA -> (a -> IO a) -> IO ()
 >updateIO (ThreadObject tickerMVar) action = do
 >    lock <- newEmptyMVar
 >    putMVar tickerMVar $ IOAction
 >        (\x -> do 
 >                x' <- action x;
 >                putMVar lock Nothing;
->                return x')
+>                return x') Nothing
 >    takeMVar lock
 >    return ()
 
->updateIONoBlock :: ThreadObject a -> (a -> IO a) -> IO ()
+>updateIONoBlock :: ThreadObject a singalA -> (a -> IO a) -> IO ()
 >updateIONoBlock (ThreadObject tickerMVar) action = do
->    putMVar tickerMVar (IOAction action)
+>    putMVar tickerMVar (IOAction action Nothing) 
 
 
->getObjectValue :: ThreadObject a -> IO a
+>getObjectValue :: ThreadObject a signalA -> IO a
 >getObjectValue (ThreadObject tickerMVar) = do
 >    valueMVar <- newEmptyMVar
 >    putMVar tickerMVar (GetObjectValueIO (\value -> putMVar valueMVar value))
 >    takeMVar valueMVar
 
->setSyncOnGet :: ThreadObject a -> (a -> IO a) -> IO ()
+>setSyncOnGet :: ThreadObject a signalA -> (a -> IO a) -> IO ()
 >setSyncOnGet (ThreadObject tickerMVar) syncOnGet = do
 >    putMVar tickerMVar $ SetSyncOnGet syncOnGet
 
->setSyncOnPut :: ThreadObject a -> (a -> IO ()) -> IO ()
+>setSyncOnPut :: ThreadObject a signalA -> (a -> (Maybe signalA) -> IO ()) -> IO ()
 >setSyncOnPut (ThreadObject tickerMVar) syncOnPut = do
 >    putMVar tickerMVar $ SetSyncOnPut syncOnPut
 
 >noSyncOnGet :: a -> IO a
 >noSyncOnGet value = return value
 
->noSyncOnPut :: a -> IO ()
->noSyncOnPut _ = return ()
+>noSyncOnPut :: a -> (Maybe signalA) -> IO ()
+>noSyncOnPut _ _ = return ()
 
->freeObject :: ThreadObject a -> IO ()
+>freeObject :: ThreadObject a signalA -> IO ()
 >freeObject (ThreadObject tickerMVar) = do
 >  putMVar tickerMVar FreeObject

@@ -39,6 +39,7 @@ And keep track of a few mutable objects, such as our grid...
 This type of mutable object, is defined by the module:
 
 >import ThreadObject
+>import StateRecords
 
 There are also some Super generic types that belong no where else.  Like type Point = (Int, Int)...
 
@@ -70,7 +71,9 @@ Special MVar used to quit.  Put a value here when you want to terminate.
 >     filePathObject'         <- threadObject
 >     reFocusNeededObject'    <- threadObject
 
->     editorObjects <- return (GridEditorObjects gridObject' canvasObject' editModeObject' focusedCellObject' focusedRectangleObject' reFocusNeededObject' fileObject' filePathObject')
+>     gridRecords'            <- stateRecords3 gridObject' focusedCellObject' focusedRectangleObject'
+
+>     editorObjects <- return (GridEditorObjects gridObject' canvasObject' editModeObject' focusedCellObject' focusedRectangleObject' reFocusNeededObject' fileObject' filePathObject' gridRecords')
 
 >     myWidgets <- loadWidgets gridEditWindowEvent editorObjects
 >     (window,_,canvas,scrwinContainer,_,cellInfo,modeInfo) <- return myWidgets
@@ -95,8 +98,16 @@ Note.  It would seem that order is important here as the sync function for gridO
 >     signal <- takeMVar exit
 >     exitWith signal
 
->syncGridwithCanvas :: GridEditorObjects -> Grid -> IO ()
->syncGridwithCanvas editorObjects mygrid = do
+>syncGridwithCanvas :: GridEditorObjects -> Grid -> Maybe (RecorderSignal ()) -> IO ()
+>syncGridwithCanvas editorObjects mygrid signal = do
+
+This is as good a time as any to record the state of our grid.  We will keep at least 20 and up to 40 states which can be returned to with the undo(Ctrl-z) function.
+
+>   case signal of
+>     Just (RecorderSignal False Nothing) ->
+>       return ()
+>     Nothing ->
+>       recordState3 20 (gridRecords editorObjects) mygrid
 
 We'll want to restore our scroll location(if possible) after we're done updating.
 
@@ -134,28 +145,29 @@ This is a bit tricky.  The drawGrid function will not actually run untill after 
 >   update (reFocusNeededObject editorObjects) (\_->True);
 >   canvas' `on` exposeEvent $ do {
 >         liftIO $ do {
->         update2
->           (reFocusNeededObject editorObjects)
->           (focusedRectangleObject editorObjects)
+>         updateMulti
+>            (reFocusNeededObject editorObjects) $
+>           finallyUpdate
+>            (focusedRectangleObject editorObjects) $
 >              (\reFocus rect->
 >                if reFocus
->                then (False, oldRectangle)
->                else (False, rect));};
+>                then (oldRectangle,False)
+>                else (rect,False));};
 >         return False;};
 
 >   return canvas';})
 
 
->syncFocusedCellWithLabel :: Label -> Maybe 	DisplayCell.DisplayCell -> IO()
->syncFocusedCellWithLabel cellInfo (Just dc) = do
+>syncFocusedCellWithLabel :: Label -> Maybe 	DisplayCell.DisplayCell -> Maybe a -> IO()
+>syncFocusedCellWithLabel cellInfo (Just dc) _ = do
 >     set cellInfo [ labelText := (show (displayCellPoint dc))]
 >     return ()
 
->syncFocusedCellWithLabel _ Nothing = do
+>syncFocusedCellWithLabel _ Nothing _ = do
 >     return ()
 
->syncEditModeWithLabel :: Label -> EditMode -> IO()
->syncEditModeWithLabel modeInfo mode = do
+>syncEditModeWithLabel :: Label -> EditMode -> Maybe a -> IO()
+>syncEditModeWithLabel modeInfo mode _ = do
 >     set modeInfo [ labelText := 
 >       (case mode of
 >         AddAction{}  -> "Add action mode"
@@ -166,14 +178,14 @@ This is a bit tricky.  The drawGrid function will not actually run untill after 
 >         FreeMovement -> "Navigation mode | F3 MoveCell")]
 >     return ()
 
->saveFile :: GridEditorObjects -> Maybe String -> IO()
->saveFile editorObjects (Just contents) = do
+>saveFile :: GridEditorObjects -> Maybe String -> Maybe () -> IO()
+>saveFile editorObjects (Just contents) signal = do
 > filePath <- getObjectValue (filePathObject editorObjects)
 > writeFile filePath contents
->saveFile _ Nothing = return ()
+>saveFile _ Nothing signal = return ()
 
->syncFocusedRectangleWithScrolledWindow :: GridEditorObjects -> Rectangle -> IO()
->syncFocusedRectangleWithScrolledWindow editorObjects rectangle@(Rectangle x y _ _) = do
+>syncFocusedRectangleWithScrolledWindow :: GridEditorObjects -> Rectangle -> Maybe () -> IO()
+>syncFocusedRectangleWithScrolledWindow editorObjects rectangle@(Rectangle x y _ _) signal = do
 >  updateIO (canvasObject editorObjects) (\scrolledWindow -> do {
 >   postGUIAsync $ do {
 
@@ -247,26 +259,28 @@ End of hack.
 >     boxPackEnd buttonBox quit PackNatural 0
 
 >     save `on` buttonPressEvent $ do{
->         liftIO $ do {update2
->            (gridObject editorObjects)
->            (fileObject editorObjects)
->            (\grid file -> (grid, (Just $ saveGrid(grid))))};
+>         liftIO $ do {updateMulti
+>            (gridObject editorObjects) $
+>           finallyUpdate
+>            (fileObject editorObjects) $
+>            (\grid file -> ((Just $ saveGrid(grid)),grid))};
 >         return True}
 
 >     window `on` keyPressEvent $ do
+>            modifier <- eventModifier
 >            key <- eventKeyName
 
 <            liftIO (print key)
 
->            case key of
->             "Escape" ->
+>            case (modifier,key) of
+>             ([],"Escape") ->
 >              liftIO $ do
 >               updateReturning (editModeObject editorObjects) 
 >                   (\mode->
 >                     case mode of
 >                       EditCell{} -> (mode,False)
 >                       otherwise  -> (FreeMovement,True))
->             "F3" ->
+>             ([],"F3") ->
 >              liftIO $ do
 >               updateWith (focusedCellObject editorObjects) (editModeObject editorObjects)
 
@@ -277,6 +291,13 @@ No need to finish the pattern with a Nothing, tryEvent will catch the exception.
 >                        MoveCell dc  -> FreeMovement
 >                        FreeMovement -> MoveCell focusedCell);
 >               return True;
+
+>             ([Control],"z")  -> 
+>              liftIO $ do
+>                success <- undoStateAction3 (gridRecords editorObjects)
+>                print success
+>                return True
+               
 >             otherwise -> return False
 
 >     onClicked quit (do {widgetDestroy window; putMVar gridEditWindowEvent GridEditWindowQuit})

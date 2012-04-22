@@ -9,7 +9,12 @@ Grid
                           , ""
                           )
                         ]
-  , gridComments = [ ( ( -1
+  , gridComments = [ ( ( -4
+                       , 3
+                       )
+                     , "hi"
+                     )
+                   , ( ( -1
                        , 1
                        )
                      , "This is a comment."
@@ -132,7 +137,7 @@ Grid
                                                                                                                  , 7
                                                                                                                  )
                                                                                                        , newThreads = [ Action
-                                                                                                                          { point = ( -4
+                                                                                                                          { point = ( -5
                                                                                                                                     , 9
                                                                                                                                     )
                                                                                                                           , code = "getChar"
