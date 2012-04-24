@@ -1,0 +1,9 @@
+To get:
+git clone git://github.com/timthelion/gridhaskell-haskarrow.git
+cd gridhaskell-haskarrow/
+
+To compile grid_edit:
+ghc grid_edit.lhs -threaded
+
+To run:
+./grid_edit examplegrid.grid-haskell
