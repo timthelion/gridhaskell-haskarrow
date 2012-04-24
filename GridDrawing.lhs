@@ -199,17 +199,13 @@ Not pure
 >editModeAction :: GridEditorObjects -> DisplayCell.DisplayCell -> Box -> EditMode -> IO EditMode
 >editModeAction editorObjects dc vbox FreeMovement = do
 >   postGUIAsync (do {
+
 >   containerForeach vbox (containerRemove vbox);
+>   print "filling with entry box";
 >   cellFormFill vbox True editorObjects dc; 
 >   widgetShowAll vbox;
 
 >   })
->   return (EditCell dc)
-
-
->editModeAction editorObjects dc vbox (EditCell cellWe'reEditing) = do
->   containerForeach vbox (containerRemove vbox)
->   cellFormFill vbox False editorObjects dc
 >   return (EditCell dc)
 
 >editModeAction editorObjects dc vbox (MoveCell cellWe'reMoving) = do
@@ -219,7 +215,6 @@ Not pure
 >              update (gridObject editorObjects)
 >                     (\grid -> gridPointsRelocation grid [(DisplayCell.displayCellPoint cellWe'reMoving,DisplayCell.displayCellPoint dc)])
 >   return (FreeMovement)
-
 
 >editModeCancleCellEdit :: GridEditorObjects -> DisplayCell.DisplayCell -> Box -> EditMode -> IO EditMode
 >editModeCancleCellEdit editorObjects dc vbox EditCell{} = do

@@ -53,7 +53,9 @@ For reading and writing grid haskell files.
 >main = do
 >     (mygrid, filePath) <- loadGrid
 
->     initGUI
+     initGUI
+
+>     unsafeInitGUIForThreadedRTS
 
 >     gridEditWindowEvent <- newEmptyMVar
 
@@ -103,7 +105,7 @@ Note.  It would seem that order is important here as the sync function for gridO
 >syncGridwithCanvas :: GridEditorObjects -> Grid -> Maybe (RecorderSignal ()) -> IO ()
 >syncGridwithCanvas editorObjects mygrid signal = do
 
-This is as good a time as any to record the state of our grid.  We will keep at least 20 and up to 40 states which can be returned to with the undo(Ctrl-z) function.
+This is as good a time as any to record the state of our grid.  We will keep at least 20 and up to 40 states which can be returned to with the undo(Ctrl-z) function.  
 
 >   case signal of
 >     Just (RecorderSignal False Nothing) ->
@@ -117,39 +119,52 @@ This is as good a time as any to record the state of our grid.  We will keep at 
 
 We'll want to restore our scroll location(if possible) after we're done updating.
 
+>   print "Recorded states, now getting value of focusedRectangleObject"
 >   oldRectangle <- getObjectValue (focusedRectangleObject editorObjects)
 
 We update the canvas with a new one which displays the new state of the grid.
 
+>   print "entering update for canvasObject"
 >   updateIO (canvasObject editorObjects)  (\canvas      -> do{
 >   canvasMVar <- newEmptyMVar;
 
+>   print "entering postGUISync";
+
 The function postGUIAsync is required to insure thread safety in GTK.  Without it, the sync function will succeed 30% of the time, and fail 70% of the time :D
 
->   postGUIAsync (do {
+>   postGUISync (do {
+
+>    print "Entered postGUISync on grid sync";
 
 First we get rid of the old canvas
 
 >    canvasContainer' <- (widgetGetParent canvas);
+
+>    print "Casting canvas's parent(VBox) to container.";
 >    canvasContainer  <- return (castToContainer (fromJust canvasContainer'));
+
+>    print "Removing canvas from container.";
 >    containerRemove canvasContainer canvas;
 
 And we make a new one...
 
+>    print "Creating new canvas.";
 >    canvas' <- scrolledWindowNew Nothing Nothing;
 
-This is a bit tricky.  The drawGrid function will not actually run untill after this sync is finished.  Since it getObjectValue of the canvasObject and the gridObject in editorObjects, it will have to wait till these values are returned from this function...
+This is a bit tricky.  The drawGrid function will not actually run untill after this sync is finished.  Since it has to getObjectValue of the canvasObject and the gridObject in editorObjects, it will have to wait till these values are returned from this function...
 
+>    print "Forking to draw the grid.";
 >    forkIO $ do {drawGrid editorObjects mygrid;};
 
+>    print "Adding canvas back into the container.";
 >    containerAdd canvasContainer canvas';
+>    print "Canvas added.";
 
->    putMVar canvasMVar canvas';
->   });
->   canvas' <- takeMVar canvasMVar;
+>    print "updating reFocusNeededObject";
+>    update (reFocusNeededObject editorObjects) (\_->True);
 
->   update (reFocusNeededObject editorObjects) (\_->True);
->   canvas' `on` exposeEvent $ do {
+>    print "adding exposeEvent";
+>    canvas' `on` exposeEvent $ do {
 >         liftIO $ do {
 >         updateMulti
 >            (reFocusNeededObject editorObjects) $
@@ -160,8 +175,8 @@ This is a bit tricky.  The drawGrid function will not actually run untill after 
 >                then (oldRectangle,False)
 >                else (rect,False));};
 >         return False;};
-
->   return canvas';})
+>    return canvas';
+>   });})
 
 
 >syncFocusedCellWithLabel :: Label -> Maybe 	DisplayCell.DisplayCell -> Maybe a -> IO()
