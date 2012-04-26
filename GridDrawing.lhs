@@ -20,8 +20,8 @@
 
 | Draw the actual gtk table which shows our grid.
 
->drawGrid :: GridEditorObjects -> Grid -> IO ()
->drawGrid  editorObjects mygrid = do{
+>drawGrid :: GridEditorObjects -> Grid -> ScrolledWindow -> IO (Maybe Widget)
+>drawGrid  editorObjects mygrid canvas = do{
 
 This is a list of cells to be displayed.
 
@@ -37,9 +37,7 @@ We use these extremes to find how big a table to make.
 
 Y before X because tableNew goes Rows Collumns order.
 
->     postGUIAsync (do {
 >     table <- tableNew (lengthBetween grid_minimum_y grid_maximum_y) (lengthBetween grid_minimum_x grid_maximum_x) True;
->     canvas <- getObjectValue (canvasObject editorObjects);
 >     scrolledWindowAddWithViewport canvas table;
 
 A "filled in" list of display cells, to make a complete grid, including blank cells.
@@ -79,11 +77,15 @@ Now we add an event to draw the lines in our diagram.
 >                 renderWithDrawable drawWin (drawArrows (zip allocations displayCellsFilled))
 >                 return False);
 
->     (case focusedWidgetMaybe of
->       Just focusedWidget -> widgetGrabFocus focusedWidget;
->       Nothing -> return ());
->     widgetShowAll canvas;
->     })}
+>     return focusedWidgetMaybe;
+
+<     (case focusedWidgetMaybe of
+<       Just focusedWidget -> widgetGrabFocus focusedWidget;
+<       Nothing -> return ());
+
+<     widgetShowAll canvas;
+
+>     }
 
 >focusedPoint (Just dc) = (DisplayCell.displayCellPoint dc)
 >focusedPoint Nothing = (0,0)
@@ -163,8 +165,8 @@ Not pure
 >            update (focusedCellObject editorObjects)
 >                   (\_->(Just dc));
 
->            updateIO (focusedRectangleObject editorObjects) (\_-> do
->                {widgetGetAllocation box});
+>            updateIONoBlock (focusedRectangleObject editorObjects) (\_-> do
+>                {postGUISync $ widgetGetAllocation box});
 >            return ();};
 >            return False};
 >         return (toWidget enter)

@@ -119,22 +119,23 @@ This is as good a time as any to record the state of our grid.  We will keep at 
 
 We'll want to restore our scroll location(if possible) after we're done updating.
 
->   print "Recorded states, now getting value of focusedRectangleObject"
+   print "Recorded states, now getting value of focusedRectangleObject"
+
 >   oldRectangle <- getObjectValue (focusedRectangleObject editorObjects)
 
 We update the canvas with a new one which displays the new state of the grid.
 
->   print "entering update for canvasObject"
->   updateIO (canvasObject editorObjects)  (\canvas      -> do{
->   canvasMVar <- newEmptyMVar;
+   print "entering update for canvasObject"
 
->   print "entering postGUISync";
+>   updateIO (canvasObject editorObjects)  (\canvas      -> do{
+
+   print "entering postGUISync";
 
 The function postGUIAsync is required to insure thread safety in GTK.  Without it, the sync function will succeed 30% of the time, and fail 70% of the time :D
 
 >   postGUISync (do {
 
->    print "Entered postGUISync on grid sync";
+    print "Entered postGUISync on grid sync";
 
 First we get rid of the old canvas
 
@@ -143,27 +144,48 @@ First we get rid of the old canvas
 >    print "Casting canvas's parent(VBox) to container.";
 >    canvasContainer  <- return (castToContainer (fromJust canvasContainer'));
 
->    print "Removing canvas from container.";
->    containerRemove canvasContainer canvas;
+--------------
+
+TODO Delete ME!!!
+
+<    print "Removing canvas from container.";
+<    containerRemove canvasContainer canvas;
+
+    aloc <- widgetGetAllocation canvas;
+    print aloc;
+
+>    mode <- getObjectValue (editModeObject editorObjects);
+>    print mode;
+
+---------------------------------
+
+This causes random glibc errors, see the "glibc crashes" file.
+
+>    print "destroying canvas!";
+>    widgetDestroy canvas;
 
 And we make a new one...
 
 >    print "Creating new canvas.";
+
 >    canvas' <- scrolledWindowNew Nothing Nothing;
 
-This is a bit tricky.  The drawGrid function will not actually run untill after this sync is finished.  Since it has to getObjectValue of the canvasObject and the gridObject in editorObjects, it will have to wait till these values are returned from this function...
+>    print "Drawing the grid.";
 
->    print "Forking to draw the grid.";
->    forkIO $ do {drawGrid editorObjects mygrid;};
+>    focusedWidgetMaybe <- drawGrid editorObjects mygrid canvas';
 
 >    print "Adding canvas back into the container.";
+
 >    containerAdd canvasContainer canvas';
+
 >    print "Canvas added.";
 
 >    print "updating reFocusNeededObject";
+
 >    update (reFocusNeededObject editorObjects) (\_->True);
 
 >    print "adding exposeEvent";
+
 >    canvas' `on` exposeEvent $ do {
 >         liftIO $ do {
 >         updateMulti
@@ -175,12 +197,26 @@ This is a bit tricky.  The drawGrid function will not actually run untill after 
 >                then (oldRectangle,False)
 >                else (rect,False));};
 >         return False;};
+
+>    print "Grabbing focus for focused cell.";
+
+>    (case focusedWidgetMaybe of
+>       Just focusedWidget -> widgetGrabFocus focusedWidget;
+>       Nothing -> return ());
+
+This still crashes, but almost never, looks like a race condition.
+
+    print "destroying canvas!";
+    widgetDestroy canvas;
+
+>    widgetShowAll canvas';
+
 >    return canvas';
 >   });})
 
 
 >syncFocusedCellWithLabel :: Label -> Maybe 	DisplayCell.DisplayCell -> Maybe a -> IO()
->syncFocusedCellWithLabel cellInfo (Just dc) _ = do
+>syncFocusedCellWithLabel cellInfo (Just dc) _ = postGUIAsync $ do
 >     set cellInfo [ labelText := (show (displayCellPoint dc))]
 >     return ()
 
@@ -188,7 +224,7 @@ This is a bit tricky.  The drawGrid function will not actually run untill after 
 >     return ()
 
 >syncEditModeWithLabel :: Label -> EditMode -> Maybe a -> IO()
->syncEditModeWithLabel modeInfo mode _ = do
+>syncEditModeWithLabel modeInfo mode _ = postGUIAsync $ do
 >     set modeInfo [ labelText := 
 >       (case mode of
 >         AddAction{}  -> "Add action mode"
@@ -210,7 +246,7 @@ This is a bit tricky.  The drawGrid function will not actually run untill after 
 >  updateIO (canvasObject editorObjects) (\scrolledWindow -> do {
 >   postGUIAsync $ do {
 
-WARNING! This is a hack!
+WARNING! This is a hack! (to take into accound the size of the scroll bars.  )
 
 >   scrolledWindowContents <- containerGetChildren scrolledWindow;
 >   (Rectangle _ _ aW aH)  <- widgetGetAllocation (head scrolledWindowContents);

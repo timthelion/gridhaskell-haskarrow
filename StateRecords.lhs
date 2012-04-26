@@ -19,24 +19,34 @@ LGPL copyright brmlab.cz contact timothyhobbs@seznam.cz
 >recordState n stateRecordsObject value = do
 >  updateIO stateRecordsObject 
 >    (\((last,stack1,stack2),to)-> do
->     print "length"
->     print $ length stack1
->     print "n"
->     print n
+
+     print "length"
+     print $ length stack1
+     print "n"
+     print n
+
 >     if length stack1 >= n
 >     then case last of
 >       Just last -> do
->         print 1
+
+         print 1
+
 >         return ((Just value,last:[],stack1), to)
 >       Nothing   -> do
->         print 2
+
+         print 2
+
 >         return ((Just value,[],stack1), to)
 >     else case last of
 >       Just last -> do
->        print 3;
+
+        print 3;
+
 >        return ((Just value,last:stack1,stack2), to)
 >       Nothing   -> do 
->        print 4;
+
+        print 4;
+
 >        return ((Just value,stack1,stack2), to))
 
 | This is to undo an action applied the thread object which is used as your "metronome", that thread object, within who's syncOnPut, are the recordState commands.  
@@ -57,28 +67,40 @@ LGPL copyright brmlab.cz contact timothyhobbs@seznam.cz
 >     case stacks of
 >       (Just last,value:stack1,stack2) -> do
 >           myUpdate to value
->           print "Jv"
+
+           print "Jv"
+
 >           return (((Nothing,stack1,stack2),to),True)
 
 >       (Nothing,value:stack1,stack2) -> do
 >           myUpdate to value
->           print "Nv"
+
+           print "Nv"
+
 >           return (((Nothing,stack1,stack2),to),True)
 
 >       (Just last,[],value:stack2) -> do
 >           myUpdate to value
->           print "J[]"
+
+           print "J[]"
+
 >           return (((Nothing,stack2,[]),to),True)
 
 >       (Nothing,[],value:stack2) -> do
 >           myUpdate to value
->           print "N[]"
+
+           print "N[]"
+
 >           return (((Nothing,stack2,[]),to),True)
 
 >       (Just last,[],[])  -> do
->          print "J[]"
+
+          print "J[]"
+
 >          return (((Nothing,[],[]),to),False)
 
 >       (Nothing,[],[])  -> do
->          print "N[]"
+
+          print "N[]"
+
 >          return (((Nothing,[],[]),to),False))
