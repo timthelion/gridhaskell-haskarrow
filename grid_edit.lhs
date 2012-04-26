@@ -141,50 +141,36 @@ First we get rid of the old canvas
 
 >    canvasContainer' <- (widgetGetParent canvas);
 
->    print "Casting canvas's parent(VBox) to container.";
+    print "Casting canvas's parent(VBox) to container.";
+
 >    canvasContainer  <- return (castToContainer (fromJust canvasContainer'));
 
---------------
+    print "destroying canvas!";
 
-TODO Delete ME!!!
-
-<    print "Removing canvas from container.";
-<    containerRemove canvasContainer canvas;
-
-    aloc <- widgetGetAllocation canvas;
-    print aloc;
-
->    mode <- getObjectValue (editModeObject editorObjects);
->    print mode;
-
----------------------------------
-
-This causes random glibc errors, see the "glibc crashes" file.
-
->    print "destroying canvas!";
 >    widgetDestroy canvas;
 
 And we make a new one...
 
->    print "Creating new canvas.";
+    print "Creating new canvas.";
 
 >    canvas' <- scrolledWindowNew Nothing Nothing;
+>    scrolledWindowSetPolicy canvas' PolicyNever PolicyNever;
 
->    print "Drawing the grid.";
+    print "Drawing the grid.";
 
 >    focusedWidgetMaybe <- drawGrid editorObjects mygrid canvas';
 
->    print "Adding canvas back into the container.";
+    print "Adding canvas back into the container.";
 
 >    containerAdd canvasContainer canvas';
 
->    print "Canvas added.";
+    print "Canvas added.";
 
->    print "updating reFocusNeededObject";
+    print "updating reFocusNeededObject";
 
 >    update (reFocusNeededObject editorObjects) (\_->True);
 
->    print "adding exposeEvent";
+    print "adding exposeEvent";
 
 >    canvas' `on` exposeEvent $ do {
 >         liftIO $ do {
@@ -198,16 +184,11 @@ And we make a new one...
 >                else (rect,False));};
 >         return False;};
 
->    print "Grabbing focus for focused cell.";
+    print "Grabbing focus for focused cell.";
 
 >    (case focusedWidgetMaybe of
 >       Just focusedWidget -> widgetGrabFocus focusedWidget;
 >       Nothing -> return ());
-
-This still crashes, but almost never, looks like a race condition.
-
-    print "destroying canvas!";
-    widgetDestroy canvas;
 
 >    widgetShowAll canvas';
 

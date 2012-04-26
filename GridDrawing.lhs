@@ -203,7 +203,9 @@ Not pure
 >   postGUIAsync (do {
 
 >   containerForeach vbox (containerRemove vbox);
->   print "filling with entry box";
+
+   print "filling with entry box";
+
 >   cellFormFill vbox True editorObjects dc; 
 >   widgetShowAll vbox;
 
