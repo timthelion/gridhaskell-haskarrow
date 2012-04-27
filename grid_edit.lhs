@@ -155,10 +155,6 @@ And we make a new one...
 
 >    canvas' <- scrolledWindowNew Nothing Nothing;
 
-Don't show scroll bars, the don't work anyways.
-
->    scrolledWindowSetPolicy canvas' PolicyNever PolicyNever;
-
     print "Drawing the grid.";
 
 >    focusedWidgetMaybe <- drawGrid editorObjects mygrid canvas';
@@ -173,19 +169,6 @@ Don't show scroll bars, the don't work anyways.
 
 >    update (reFocusNeededObject editorObjects) (\_->True);
 
-    print "adding exposeEvent";
-
->    canvas' `on` exposeEvent $ do {
->         liftIO $ do {
->         updateMulti
->            (reFocusNeededObject editorObjects) $
->           finallyUpdate
->            (focusedRectangleObject editorObjects) $
->              (\reFocus rect->
->                if reFocus
->                then (oldRectangle,False)
->                else (rect,False));};
->         return False;};
 
     print "Grabbing focus for focused cell.";
 
@@ -194,6 +177,23 @@ Don't show scroll bars, the don't work anyways.
 >       Nothing -> return ());
 
 >    widgetShowAll canvas';
+
+>    update (focusedRectangleObject editorObjects)
+>              (\_->oldRectangle);
+
+    print "adding exposeEvent";
+
+>    canvas' `on` exposeEvent $ do {
+>         liftIO $ do {
+>         updateMulti
+>           (reFocusNeededObject editorObjects) $
+>           finallyUpdate
+>            (focusedRectangleObject editorObjects) $
+>              (\reFocus rect->
+>                if reFocus
+>                then (oldRectangle,False)
+>                else (rect,False));};
+>         return True;};
 
 >    return canvas';
 >   });})
