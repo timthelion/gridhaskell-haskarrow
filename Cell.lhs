@@ -5,7 +5,7 @@
 
 >import Data.Maybe
 
-Patterns are owned by switch statements.
+Patterns are owned by which statements.
 
 >data Pattern = Pattern {patternPoint   :: Super.Point,
 >                        pattern        :: String, 
@@ -60,6 +60,17 @@ The getChar function has type IO Char and thus does not need to be "returned." T
 
 >        next      :: Cell} 
 
+>  | Lambda {
+>        point     :: Super.Point,
+
+>        arguments :: [(Super.Point,String)],
+
+>        arrow     :: Super.Point,
+>        body      :: Cell,
+
+>        next      :: Cell}
+
+
 |  Destination place where we take a value that was aquired a while ago and place it on the stack
 
 >  | Destination {
@@ -76,9 +87,9 @@ The getChar function has type IO Char and thus does not need to be "returned." T
 >        path      :: (Maybe Path.Path),
 >        next      :: Cell}
 
-Switch statement.  One example of how visual programming may be better than textual.
+Which statement.  One example of how visual programming may be better than textual.
 
->  | Switch {
+>  | Which {
 >        point     :: Super.Point,
 >        patterns  :: [Pattern]}
 
@@ -121,6 +132,10 @@ These MVar cells have two points.  Why?  They are displayed on the screen like t
 >        mvar      :: String,
 >        next      :: Cell}
 
+Return the last value in the stack.
+
+>  | Return{point  :: Super.Point}
+
 End of thread.  Stop, and wait for Exit. 
 
 >  | End{point     :: Super.Point}
@@ -140,13 +155,15 @@ As stated earlier, we use show and read to save this to a file.
 >cellText :: Cell -> String
 >cellText cell@Start{}        = code cell
 >cellText cell@Action{}       = code cell
->cellText Switch{}            = "Switch"
+>cellText Lambda{}            = "Lambda"
+>cellText Which{}             = "Which"
 >cellText cell@Destination{}  = value cell
 >cellText Jump{}              = "Jump"
 >cellText Fork{}              = "Fork"
 >cellText cell@NewEmptyMVar{} = "newEmptyMVar"
 >cellText cell@PutMVar{}      = "putMVar"
 >cellText cell@TakeMVar{}     = "takeMVar"
+>cellText Return{}            = "Return"
 >cellText End{}               = "End"
 >cellText Exit{}              = "Exit"
 
@@ -154,17 +171,19 @@ We use this to build a list of cells for display on the screen.
 
 >cellNext :: Cell -> [Cell]
 >cellNext cell@Jump{}     = []
+>cellNext cell@Return{}   = []
 >cellNext cell@End{}      = []
 >cellNext cell@Exit{}     = []
 >cellNext cell@Fork{}     = newThreads cell
->cellNext cell@Switch{}   = map action (patterns cell)
+>cellNext cell@Which{}    = map action (patterns cell)
+>cellNext cell@Lambda{}   = next cell : body cell : []
 >cellNext cell            = [next cell]
 
 >cellPutCode :: Cell -> String -> Maybe Cell
 >cellPutCode _ "Fork"        = Nothing
 >cellPutCode _ "Jump"        = Nothing
 >cellPutCode _ "End"         = Nothing
->cellPutCode _ "Switch"      = Nothing
+>cellPutCode _ "Which"       = Nothing
 >cellPutCode _ "Destination" = Nothing
 
 >cellPutCode cell@Start{}  code' = Just cell{code=code'}
@@ -180,7 +199,7 @@ We use this to build a list of cells for display on the screen.
 
 >cellPutCell :: Cell -> Cell -> (Cell,[Cell]) 
 
->cellPutCell cell cells@Switch{} =
+>cellPutCell cell cells@Which{} =
 > (cells',strays)
 > where (cells',strays) = if (point cell) == (point cells)
 >                          then (cell,cellNext cells)
@@ -234,7 +253,7 @@ We use this to build a list of cells for display on the screen.
 >  next = cellPointsRelocation (next originalCells) relocations
 >  }
 
->cellPointsRelocation originalCells@Switch{} relocations  =
+>cellPointsRelocation originalCells@Which{} relocations  =
 >  (cellPointsRelocation' originalCells relocations){
 >    patterns = map (\pattern -> patternPointsRelocation pattern relocations) (patterns originalCells)}
 
@@ -305,8 +324,3 @@ We use this to build a list of cells for display on the screen.
 >     of
 >  (p:ps) -> p
 >  []     -> point
-
-| Return the Points of the arguments passed to the 'Start'.
-
->argumentsPoints :: [(Super.Point,String)] -> [Super.Point]
->argumentsPoints arguments = map fst arguments

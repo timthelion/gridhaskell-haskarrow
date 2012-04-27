@@ -22,30 +22,35 @@ This is an example program written in grid haskell.  It reads characters from in
 
 >        gridCells = (Start (-1,0) "" "main" []
 
+Preform a group of actions, leaving the stack alone.
+
+>   (Lambda (0,0) [] (1,0)
+
 Get a character from stdin and push it to the stack. 
 
->	(Action (0,0) "getChar" False True False Nothing Nothing 
+>	(Action (2,0) "getChar" False True False Nothing Nothing 
 
 Push 'n' to the stack.  We also carry this value down a path, just to sho we can...
 
->	(Action (0,1) "'n'" True True False (Just ((1,1), "character"))
->                                       (Just (SteppingStone (3,1)
->                                       (SteppingStone   (3,6)
->										(PathDestination (2,6)))))
+>	(Action (3,0) "'n'" True True False Nothing Nothing
 
 Pull the two stack items, compair them, and push the result to the stack.
 
->	(Action (0,2) "(==)" True True True Nothing Nothing
+>	(Action (4,0) "(==)" True True True Nothing Nothing
+
+Return the value of the ==.
+
+>   (Return (5,0)))))
 
 Pull that value from the stack and pattern match it against True, or False, (an ulimited number of patters of course is possible :)
 
->	(Switch (0,3) 
+>	(Which (0,3) 
 >	[(Pattern {patternPoint   = (2,5) ,
 >              pattern = "True",
 
 If the character typed was 'n' output the 'n' which we carried down the path from action (0,1)
 
->   action = (Destination (2,6) (0,1) "character" Nothing
+>   action = (Action (2,6) "'n'" True True False Nothing Nothing
 >	(Action (2,7) "putChar" False False True Nothing Nothing 
 
 and exit.  Note, there IS an important difference between Exit and End.  End does NOTHING.  Exit kills everything in an indiscriminate, imediate, and genocidal fashion.
@@ -78,11 +83,15 @@ The other thread gets that character out of the MVar and puts it on the stack.
 
 >	(TakeMVar (-1,11) (-2,11) "char"
 
+Then we put that to output.
+
+>   (Action (-1,12) "putChar" False False True Nothing Nothing
+
 And then "Jumps" back up to the start of our "loop" which began at the switch statement.  I know that GOTO statements are evil when it comes to textual programs.  Hopefully, I can prove to you, that in visual programming, this is very much not the case.
 
->	(Jump (-1,12) (Just (SteppingStone (0,12)
->                (SteppingStone   (1,2)
->				 (PathDestination (0,1)))))))]))})]))))),
+>	(Jump (-1,13) (Just (SteppingStone (0,12)
+>                 (SteppingStone   (1,2)
+>				  (PathDestination (0,0))))))))]))})]))),
 >   gridLooseCells=[(Action (3,10) "getChar" False True False Nothing Nothing (End (3,11)))]}
 
 \end{code}

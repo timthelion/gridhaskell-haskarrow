@@ -130,7 +130,9 @@ DisplayCellArguments
 
 DisplayCellPatterns
 
->       Cell.Switch{} -> map (\pattern-> DisplayCellPattern pattern) (Cell.patterns cell)
+>       Cell.Which{} -> map (\pattern-> DisplayCellPattern pattern) (Cell.patterns cell)
+
+>       Cell.Lambda{} -> DisplayCellArgument (Cell.arrow cell) "->" : map (\(argumentPoint,argumentName) -> DisplayCellArgument argumentPoint argumentName) (Cell.arguments cell)
 
 DisplayCellMVarLabels
 
@@ -149,7 +151,7 @@ DisplayCellPaths
 >       _                   -> []
 >       ) ++
 
-cellNext gives us a list, because in the case of Fork or If(Switch) we will end up with two of them.  This map gives us a type [[DisplayCell]] so we need to concat it.
+cellNext gives us a list, because in the case of Fork or Which we will end up with more than one of them of them.  This map gives us a type [[DisplayCell]] so we need to concat it.
 
 >          (concatMap displayCellsfromCells (Cell.cellNext cell))
 

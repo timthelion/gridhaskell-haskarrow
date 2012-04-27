@@ -154,6 +154,9 @@ And we make a new one...
     print "Creating new canvas.";
 
 >    canvas' <- scrolledWindowNew Nothing Nothing;
+
+Don't show scroll bars, the don't work anyways.
+
 >    scrolledWindowSetPolicy canvas' PolicyNever PolicyNever;
 
     print "Drawing the grid.";

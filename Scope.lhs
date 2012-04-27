@@ -10,20 +10,19 @@
 
 >data Scope = Scope {
 
-| 'values' is a list of Points which represent their origin.  This is based on our internal and arbitrary naming structure for values.  In our intermediate Haskell code, we name our values v0x0 where 0x0 is the point of the Cell from which the value originated.
-
-> values      :: [Point],
-> mvars       :: [String],
-> higherScope :: Scope}
+> values       :: [String],
+> patterns     :: [String],
+> higherScope  :: Scope}
 >		   | TopScope
 >    deriving (Show, Read)
 
 | An 'initialScope' to be used at the Start of each program.
 
 >initialScope :: Cell.Cell -> Scope
->initialScope cell = Scope {values      = cellValues cell,
->      mvars       = ["exit"],
->      higherScope = TopScope}
+>initialScope cell    = Scope {
+>      values         = "exit":(cellValues cell),
+>      patterns       = [],
+>      higherScope    = TopScope}
 
 
 | 'scopeAt' returns the socope at the 'Point' given the first 'Cell' in the grid.
@@ -66,44 +65,39 @@ Patterns from switch ->   (-1,4)'y'       (1,4)'n'
                                  
 After the Join, we go back to the higherScope which we had before the Switch.  But both Scopes, the one that we got going down the 'y' branch, and the one we got going down the 'n' branch are valid and identical.  
 
+NOTE:  I no longer support Join.  Lambda makes it's existence irrelivant.
+
 >   where
 >           nextScopes = catMaybes 
 >               (map (\cell -> scopeAt' end cell values) 
 >                   (Cell.cellNext cell))
 
 
->cellValues :: Cell.Cell -> [Point]
->cellValues cell@Cell.Start{}  = Cell.argumentsPoints (Cell.arguments cell)
+>cellValues :: Cell.Cell -> [String]
+>cellValues cell@Cell.Start{}  = map snd (Cell.arguments cell)
 
-This is an awfully complicated way of saying "If there is a path comming out of this Cell this Cell's value should be preserved in scope, otherwise forget about it."
+This is an awfully complicated way of saying "If there is a lable attached to this Cell this Cell's value should be preserved in scope, otherwise forget about it."
 
 >cellValues cell@Cell.Action{} = 
->    if isJust (Cell.path cell)
->    then []
->    else [Cell.point cell]
+>    case (Cell.label cell) of
+>        Just (_,label) -> [label]
+>        Nothing -> []
 
 >cellValues _ = []
 
 | Return a new Scope including the new MVars.
 
->mvarsAdd :: Scope -> [String] -> Scope
->mvarsAdd (Scope values oldMVars higherScope) mvars =
->    (Scope values (oldMVars ++ mvars) higherScope) 
+>valuesAddByName :: Scope -> [String] -> Scope
+>valuesAddByName (Scope values patterns higherScope) valuesToAdd =
+>    (Scope (values ++ valuesToAdd) patterns higherScope) 
 
->mvarAdd :: Scope -> String -> Scope
->mvarAdd scope mvar =
->    mvarsAdd scope [mvar]
+>valueAddByName :: Scope -> String -> Scope
+>valueAddByName scope value =
+>    valuesAddByName scope [value]
 
+>addValueFromLabel :: Scope -> Maybe (Super.Point, String) -> Scope
+>addValueFromLabel scope (Just (_,label)) = scope{values=label:(values scope)}
+>addValueFromLabel scope Nothing = scope
 
-| Return a new Scope including the new values.
-
->valuesAdd :: Scope -> [Point] -> Scope
->valuesAdd (Scope value_list mvar_list higher) values = 
->        (Scope (values++value_list) mvar_list higher)
-
-| Return a new Scope with the point added to values feild depending on whether the Path given was real or a NoPath.
-
->addPath :: Scope -> (Maybe Path) -> Point -> Scope
->addPath values Nothing _ = values
->addPath (Scope values mvars higher) _ p =
->	(Scope (p:values) mvars higher)
+>addPattern :: Scope -> String -> Scope
+>addPattern scope pattern = scope{patterns=pattern:(patterns scope)}

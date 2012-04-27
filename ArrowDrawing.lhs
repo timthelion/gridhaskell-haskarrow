@@ -26,7 +26,7 @@ We go through the list both forwards and backwards, completing arrows.
 
 | The 'arrowsOf' or between a list of cells.
 
- The first argument is the list of the display cells, and their geometric locations on the screen.  The seccond argument is the list of unfinished arrows.  When we come across a Fork, or Switch, or Code element we add a Rectangle and Point.  The Point is relative to the coordinate system of the Grid and not of the pixels on the screen :) .  We keep the tuple in the list of unfinished arrows untill we reach the Point of the other endo of the arrow.  Then we finish the arrow and add it to our output.
+ The first argument is the list of the display cells, and their geometric locations on the screen.  The seccond argument is the list of unfinished arrows.  When we come across a Fork, or Which, or Code element we add a Rectangle and Point.  The Point is relative to the coordinate system of the Grid and not of the pixels on the screen :) .  We keep the tuple in the list of unfinished arrows untill we reach the Point of the other endo of the arrow.  Then we finish the arrow and add it to our output.
 
 >arrowsOf :: [(Rectangle,DisplayCell.DisplayCell)] -> [(Rectangle,Super.Point)] -> ([(Rectangle,Rectangle)],[(Rectangle,Super.Point)])
 
@@ -38,7 +38,7 @@ Path Arrows
 
 The arrows going down to the branches of a switch.
 
->arrowsOf ((r, (DisplayCell.DisplayCellCode cell@Cell.Switch{})):cells) unfinished_arrows = 
+>arrowsOf ((r, (DisplayCell.DisplayCellCode cell@Cell.Which{})):cells) unfinished_arrows = 
 > arrowsOf' r (Cell.point cell) unfinished_arrows (map Cell.patternPoint (Cell.patterns cell)) cells
 
 >arrowsOf ((r,(DisplayCell.DisplayCellPattern pattern)):cells) unfinished_arrows =
