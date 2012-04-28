@@ -167,7 +167,12 @@ Not pure
 >         then set enter [buttonRelief := ReliefHalf]
 >         else set enter [buttonRelief := ReliefNone]
 >         boxPackStart box enter PackGrow 0
->         onClicked enter (do {updateIO (editModeObject editorObjects) (editModeAction editorObjects dc box)})
+>         enter `on` buttonPressEvent $ do{
+>             updateIO
+>               (editModeObject editorObjects)
+>                (editModeAction editorObjects dc box)}
+    
+         onClicked enter (do {updateIO (editModeObject editorObjects) (editModeAction editorObjects dc box)})
 
 >         enter `on` focusInEvent $ do 
 >          { liftIO $ do {
@@ -255,9 +260,7 @@ Not pure
 >   widgetShowAll vbox;
 >   widgetGrabFocus focusedWidget
 >   })
-
 >   return FreeMovement
-
 
 >attachCellForm :: Table -> Box -> (Int,Int) -> IO ()
 >attachCellForm table form (x,y) = 

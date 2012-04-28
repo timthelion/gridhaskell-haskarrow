@@ -189,10 +189,6 @@ We use this to build a list of cells for display on the screen.
 >cellPutCode cell@Start{}  code' = Just cell{code=code'}
 >cellPutCode cell@Action{} code' = Just cell{code=code'}
 
->cellPutCode cell@NewEmptyMVar{} mvar' = Just cell{mvar=mvar'}
->cellPutCode cell@TakeMVar{}     mvar' = Just cell{mvar=mvar'}
->cellPutCode cell@PutMVar{}      mvar' = Just cell{mvar=mvar'}
-
 >cellPutCode cell@Exit{} signal' = Just cell{signal=signal'}
 
 |Put the first cell into the list of cells, at the point of the cell.  We return a tuple with our new tree of cells, plus the cells that used to come after the cell we just replaced.
