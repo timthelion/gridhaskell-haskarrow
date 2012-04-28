@@ -20,8 +20,8 @@
 
 | Draw the actual gtk table which shows our grid.
 
->drawGrid :: GridEditorObjects -> Grid -> ScrolledWindow -> IO (Maybe Widget)
->drawGrid  editorObjects mygrid canvas = do{
+>drawGrid :: GridEditorObjects -> Grid -> ScrolledWindow -> Rectangle -> IO (Maybe Widget)
+>drawGrid  editorObjects mygrid canvas oldRectangle = do{
 
 This is a list of cells to be displayed.
 
@@ -75,6 +75,15 @@ Now we add an event to draw the lines in our diagram.
 >       (\_ -> do drawWin <- widgetGetDrawWindow table
 >                 allocations <- (mapM widgetGetAllocation (map fst cellForms))
 >                 renderWithDrawable drawWin (drawArrows (zip allocations displayCellsFilled))
+>                 liftIO $ do {
+>                  updateMulti
+>                   (reFocusNeededObject editorObjects) $
+>                  finallyUpdate
+>                   (focusedRectangleObject editorObjects) $
+>                     (\reFocus rect->
+>                       if reFocus
+>                       then (oldRectangle,False)
+>                       else (rect,False));};
 >                 return False);
 
 >     return focusedWidgetMaybe;

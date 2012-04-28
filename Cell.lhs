@@ -244,6 +244,15 @@ We use this to build a list of cells for display on the screen.
 >  next = cellPointsRelocation (next originalCells) relocations
 >  }
 
+>cellPointsRelocation originalCells@Lambda{} relocations  =
+>  (cellPointsRelocation' originalCells relocations){
+>  arguments = argumentsPointsRelocation (arguments originalCells) relocations,
+>  arrow = relocatePoint (arrow originalCells) relocations,
+>  body  = cellPointsRelocation (body originalCells) relocations,
+>  next  = cellPointsRelocation (next originalCells) relocations
+>  }
+
+
 >cellPointsRelocation originalCells@Destination{} relocations  =
 >  (cellPointsRelocation' originalCells relocations){
 >  origin = relocatePoint (origin originalCells) relocations,

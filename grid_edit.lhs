@@ -155,9 +155,11 @@ And we make a new one...
 
 >    canvas' <- scrolledWindowNew Nothing Nothing;
 
+>    scrolledWindowSetPolicy canvas' PolicyNever PolicyNever;
+
     print "Drawing the grid.";
 
->    focusedWidgetMaybe <- drawGrid editorObjects mygrid canvas';
+>    focusedWidgetMaybe <- drawGrid editorObjects mygrid canvas' oldRectangle;
 
     print "Adding canvas back into the container.";
 
@@ -178,22 +180,8 @@ And we make a new one...
 
 >    widgetShowAll canvas';
 
->    update (focusedRectangleObject editorObjects)
->              (\_->oldRectangle);
-
-    print "adding exposeEvent";
-
->    canvas' `on` exposeEvent $ do {
->         liftIO $ do {
->         updateMulti
->           (reFocusNeededObject editorObjects) $
->           finallyUpdate
->            (focusedRectangleObject editorObjects) $
->              (\reFocus rect->
->                if reFocus
->                then (oldRectangle,False)
->                else (rect,False));};
->         return True;};
+    update (focusedRectangleObject editorObjects)
+              (\_->oldRectangle);
 
 >    return canvas';
 >   });})

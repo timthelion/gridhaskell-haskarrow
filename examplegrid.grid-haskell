@@ -177,8 +177,8 @@ Grid
                                                                                                                                     )
                                                                                                                           , path = Just
                                                                                                                                      SteppingStone
-                                                                                                                                       { point = ( 0
-                                                                                                                                                 , 12
+                                                                                                                                       { point = ( 1
+                                                                                                                                                 , 13
                                                                                                                                                  )
                                                                                                                                        , next = SteppingStone
                                                                                                                                                   { point = ( 1
