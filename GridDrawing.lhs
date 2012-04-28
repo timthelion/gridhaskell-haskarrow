@@ -175,7 +175,8 @@ Not pure
 >                   (\_->(Just dc));
 
 >            updateIONoBlock (focusedRectangleObject editorObjects) (\_-> do
->                {postGUISync $ widgetGetAllocation box});
+>                {rect <- postGUISync $ widgetGetAllocation box;
+>                 return rect;});
 >            return ();};
 >            return False};
 >         return (toWidget enter)

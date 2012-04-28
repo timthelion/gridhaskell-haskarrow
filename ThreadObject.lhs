@@ -113,7 +113,7 @@ action v1 v2 v3 = (v3,(v2,(v1)))
 
 >updateMulti :: ThreadObject a signalA -> (a -> IO a) -> IO ()
 >updateMulti to action = do
->  updateIO to action
+>  updateIONoBlock to action
 
 >alsoUpdate :: ThreadObject a signal -> (t -> a -> IO (a, b)) -> t -> IO b
 >alsoUpdate to action = 
