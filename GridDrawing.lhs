@@ -1,8 +1,26 @@
+GPLV3.0 or later copyright brmlab.cz contact timothyhobbs@seznam.cz
+
+Copyright 2012.
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 >module GridDrawing (drawGrid) where
 
 >import Graphics.UI.Gtk
 >import Data.Tuple
 >import Data.List
+>import Data.NumInstances
 >import Control.Concurrent
 >import Control.Monad.IO.Class
 
@@ -88,11 +106,11 @@ Now we add an event to draw the lines in our diagram.
 
 >     return focusedWidgetMaybe;
 
-<     (case focusedWidgetMaybe of
-<       Just focusedWidget -> widgetGrabFocus focusedWidget;
-<       Nothing -> return ());
+     (case focusedWidgetMaybe of
+       Just focusedWidget -> widgetGrabFocus focusedWidget;
+       Nothing -> return ());
 
-<     widgetShowAll canvas;
+     widgetShowAll canvas;
 
 >     }
 
@@ -167,18 +185,28 @@ Not pure
 >         then set enter [buttonRelief := ReliefHalf]
 >         else set enter [buttonRelief := ReliefNone]
 >         boxPackStart box enter PackGrow 0
->         enter `on` buttonPressEvent $ do{
->             updateIO
->               (editModeObject editorObjects)
->                (editModeAction editorObjects dc box)}
+
+         enter `on` buttonPressEvent $ liftIO $ do{
+             updateIO
+               (editModeObject editorObjects)
+                (editModeAction editorObjects dc box);
+             return False;}
     
-         onClicked enter (do {updateIO (editModeObject editorObjects) (editModeAction editorObjects dc box)})
+>         onClicked enter (do {updateIONoBlock (editModeObject editorObjects) (editModeAction editorObjects dc box)})
+
+>         enter `on` focusOutEvent $ do 
+>             { liftIO $ do
+>            update (editModeObject editorObjects)
+>                   (\mode -> case mode of
+>                              ShowError e True -> ShowError e False
+>                              ShowError _ False -> FreeMovement
+>                              otherwise   -> mode);
+>               return False};
 
 >         enter `on` focusInEvent $ do 
 >          { liftIO $ do {
 >            update (focusedCellObject editorObjects)
 >                   (\_->(Just dc));
-
 >            updateIONoBlock (focusedRectangleObject editorObjects) (\_-> do
 >                {rect <- postGUISync $ widgetGetAllocation box;
 >                 return rect;});
@@ -214,26 +242,51 @@ Not pure
 >         return (toWidget entry)
 
 >editModeAction :: GridEditorObjects -> DisplayCell.DisplayCell -> Box -> EditMode -> IO EditMode
+
+If we are in FreeMovement mode we make a text entry and enter EditCell mode.
+
 >editModeAction editorObjects dc vbox FreeMovement = do
->   postGUIAsync (do {
+>   postGUISync (do {
 
->   containerForeach vbox (containerRemove vbox);
+If we are on an End, Exit, or Return cell, we should move this cell and make a new one to edit.
 
-   print "filling with entry box";
+>   (iShouldEnterEditMode,withCell) <- (case dc of
+>     DisplayCell.DisplayCellCode (Cell.Exit point _) -> do
+>               relocateSuccess <- updateReturning (gridObject editorObjects)
+>                      (\grid -> gridPointsRelocation grid [(point,point + (0,1))])
 
->   cellFormFill vbox True editorObjects dc; 
->   widgetShowAll vbox;
+>               if relocateSuccess
+>               then
 
+TODO insert a new cell.
+
+>                   return (True,dc)--TODO replace dc with our new cell...
+>               else return (False,dc)
+>     otherwise  -> return (True,dc));
+
+>   if iShouldEnterEditMode
+>   then do
+>     containerForeach vbox (containerRemove vbox);
+
+     print "filling with entry box";
+
+>     cellFormFill vbox True editorObjects withCell; 
+>     widgetShowAll vbox;
+>     return (EditCell withCell);
+>   else do
+>     return (ShowError "Cannot add a new Cell, there is something in the way." True);
 >   })
->   return (EditCell dc)
+  
 
->editModeAction editorObjects dc vbox (MoveCell cellWe'reMoving) = do
+>editModeAction editorObjects dc vbox (MoveCell cellWe'reMoving) = 
 >   case cellWe'reMoving of
->     DisplayCell.DisplayCellBlank{} -> return ()
->     otherwise ->
->              update (gridObject editorObjects)
+>     DisplayCell.DisplayCellBlank{} -> return (FreeMovement)
+>     otherwise -> do
+>              relocationSuccessfull <- updateReturning (gridObject editorObjects)
 >                     (\grid -> gridPointsRelocation grid [(DisplayCell.displayCellPoint cellWe'reMoving,DisplayCell.displayCellPoint dc)])
->   return (FreeMovement)
+>              if relocationSuccessfull
+>              then return (FreeMovement)
+>              else return (ShowError "Cannot move cell, there is something in the way." True)
 
 >editModeCancleCellEdit :: GridEditorObjects -> DisplayCell.DisplayCell -> Box -> EditMode -> IO EditMode
 >editModeCancleCellEdit editorObjects dc vbox EditCell{} = do

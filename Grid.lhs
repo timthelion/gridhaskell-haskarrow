@@ -1,4 +1,19 @@
-GPLv3 (c) Timothy Hobbs
+GPLV3.0 or later copyright brmlab.cz contact timothyhobbs@seznam.cz
+
+Copyright 2012.
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 >module Grid where
 >import qualified Cell
@@ -22,7 +37,6 @@ GPLv3 (c) Timothy Hobbs
 >        gridName          :: String,
 >        gridLicence       :: String,
 >        gridImports       :: [String],
->        gridPureFunctions :: [(Prototype, String)],
 >        gridComments      :: [Comment],
 >        gridCells         :: Cell.Cell,
 >        gridLooseCells    :: [Cell.Cell]}
@@ -36,14 +50,13 @@ GPLv3 (c) Timothy Hobbs
 >       gridName          = "",
 >       gridLicence       = "",
 >       gridImports       = [""],
->       gridPureFunctions = [("","")],
 >       gridComments      = [],
 >       gridCells         = Cell.End (0,0),
 >       gridLooseCells    = []}
 
 >gridPutComment :: Point -> String -> Grid -> Grid
->gridPutComment point comment (Grid message gridName gridLicence gridImports gridPureFunctions gridComments gridCells looseCells) =
->  Grid message gridName gridLicence gridImports gridPureFunctions ((point,comment):(filter (\comment -> not $ point == (fst comment)) gridComments)) gridCells looseCells
+>gridPutComment point comment grid =
+>  grid{gridComments=((point,comment):(filter (\comment -> not $ point == (fst comment)) (gridComments grid)))} 
 
 Put the cell at the point specified into the grid.
 
@@ -54,12 +67,27 @@ Put the cell at the point specified into the grid.
 >  else Just grid{gridCells=fst (Cell.cellPutCell cell gridCells')}
 >  where gridCells' = gridCells grid
 
->gridPointsRelocation :: Grid -> [(Super.Point,Super.Point)] -> Grid
+>gridPointsRelocation :: Grid -> [(Super.Point,Super.Point)] -> (Grid,Bool)
 >gridPointsRelocation grid relocations =
-> grid{gridCells = Cell.cellPointsRelocation (gridCells grid) relocations,
->      gridLooseCells = map (\cell -> Cell.cellPointsRelocation cell relocations) (gridLooseCells grid)}
-
-TODO TODO TODO
+> if not $ pointsFilledGrid grid $ map snd relocations
+> then (grid{gridCells = Cell.cellPointsRelocation (gridCells grid) relocations,
+>      gridLooseCells = map (\cell -> Cell.cellPointsRelocation cell relocations) (gridLooseCells grid)},True)
+> else (grid,False)
 
 >pointFilledGrid :: Grid -> Point -> Bool
->pointFilledGrid _ _ = False
+>pointFilledGrid grid point =
+
+Match to comments.
+
+>  (or $ map (\(gridPoint,_)->gridPoint == point) (gridComments grid)) ||
+
+Or cells
+
+>  (Cell.cellPointFilled (gridCells grid) point) ||
+
+Or loose cells
+
+>  (or $ map (\cell->Cell.cellPointFilled cell point) (gridLooseCells grid))
+
+>pointsFilledGrid :: Grid -> [Point] -> Bool
+>pointsFilledGrid grid points = or $ map (pointFilledGrid grid) points

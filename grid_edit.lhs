@@ -1,3 +1,20 @@
+GPLV3.0 or later copyright brmlab.cz contact timothyhobbs@seznam.cz
+
+Copyright 2012.
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 >module Main where
 
 Libraries external to application.
@@ -175,7 +192,10 @@ And we make a new one...
     print "Grabbing focus for focused cell.";
 
 >    (case focusedWidgetMaybe of
->       Just focusedWidget -> widgetGrabFocus focusedWidget;
+>       Just focusedWidget -> do 
+>        widgetGrabFocus focusedWidget;
+>        return();
+
 >       Nothing -> return ());
 
 >    widgetShowAll canvas';
@@ -204,7 +224,9 @@ And we make a new one...
 >         EditPath{}   -> "Path edit mode"
 >         MoveCell{}   -> "Move cell mode | F3/Esc Exit Mode | Enter Place Cell"
 >         EditCell{}   -> "Cell edit mode | Esc Exit Mode"
->         FreeMovement -> "Navigation mode | F3 MoveCell")]
+>         FreeMovement -> "Navigation mode | F3 MoveCell"
+>         ShowError message _ -> message)]
+
 >     return ()
 
 >saveFile :: GridEditorObjects -> Maybe String -> Maybe () -> IO()
@@ -318,7 +340,7 @@ No need to finish the pattern with a Nothing, tryEvent will catch the exception.
 >                      (\(Just focusedCell) editMode -> 
 >                        case editMode of
 >                        MoveCell dc  -> FreeMovement
->                        FreeMovement -> MoveCell focusedCell);
+>                        otherwise -> MoveCell focusedCell);
 >               return True;
 
 >             ([Control],"z")  -> 

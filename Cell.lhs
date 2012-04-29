@@ -1,3 +1,20 @@
+GPLV3.0 or later copyright brmlab.cz contact timothyhobbs@seznam.cz
+
+Copyright 2012.
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 >module Cell where
 
 >import qualified Path
@@ -329,3 +346,31 @@ We use this to build a list of cells for display on the screen.
 >     of
 >  (p:ps) -> p
 >  []     -> point
+
+>cellPointFilled :: Cell -> Super.Point -> Bool
+>cellPointFilled cell pointToCheck =
+> if pointToCheck == (point cell)
+> then True
+> else (case cell of
+>  Start{} ->
+>   or $ map (\(point,_) -> point == pointToCheck) (arguments cell)
+>  Action{} -> (case (label cell) of
+>               Just (point,_) -> point == pointToCheck
+>               Nothing         -> False) ||
+>              (case (path cell) of
+>               Just path -> Path.pathPointFilled path pointToCheck
+>               Nothing   -> False)
+>  Lambda{} -> (or $ map (\(point,_) -> point == pointToCheck) (arguments cell)) ||
+>              (arrow cell == pointToCheck)
+>  Destination{} -> case (path cell) of
+>                    Just path -> Path.pathPointFilled path pointToCheck
+>                    Nothing -> False
+>  Which{} -> or $ map (\pattern->(patternPoint pattern)==pointToCheck) (patterns cell)
+>  Jump{}  -> case (path cell) of
+>              Just path -> Path.pathPointFilled path pointToCheck
+>              Nothing -> False
+>  NewEmptyMVar{} -> labelPoint cell == pointToCheck
+>  TakeMVar{}     -> labelPoint cell == pointToCheck
+>  PutMVar{}      -> labelPoint cell == pointToCheck
+>  otherwise      -> False) ||
+>  (or $ map (\cell->cellPointFilled cell pointToCheck) (cellNext cell))

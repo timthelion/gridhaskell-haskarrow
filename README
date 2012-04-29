@@ -7,3 +7,42 @@ ghc grid_edit.lhs -threaded
 
 To run:
 ./grid_edit examplegrid.grid-haskell
+
+
+This is FNF software.  What does that mean?  I am not the maintainer.
+
+What does FNF stand for?
+
+Take these usage cases:
+
+Sally: I found a bug in your software, please fix it.
+
+Me: Ok, great, fnf and I'll pull from you when you're done.
+
+  - fnf = fork it and fix it
+  
+Joe: You use VI hotkeys for navigation.  Emacs FTW, your software sux!!!111
+
+Me:  If you don't like it, fnf.
+
+  - fnf = fork it and fuck off
+  
+Tom:  Hey, I have a great idea, lets reimplement your backend with plug in support for lua.
+
+Me: Hey, it's free software, fnf! :D
+
+  - fnf = fork it and fap
+
+FNF software often seems to the newbie or the non programer to be a hostile environment.  It is not intended this way.  The reason why the FNF model is chosen, is not out of hostility or hatered of newbies.  It's out of the desire to provide the user with a level of freedome not provided by the classical maintainer based development model.  Haskarrow land is not a dictatorship, and I am not the dictator here.  We are on equal footing.
+
+I have seen to many large open source projects get bogged down in politics and beurocracy.  It's a tragedy to see that a patch won't go through due to the whim of some long term dev.  As much as FNF may be hostile to the newbie, maintainership is hostile to the programers who develop and promote FOSS.
+
+FNF doesn't mean I won't help you, give you advice, show you how my code works.  It means I won't do it for you.  The last example I provide for you in my definition of FNF is this:
+
+Jessica:  Look, now you can get the Haskarrow IDE in hot pink and perrywinkle blue... WITH UNICORNS!  FNF!!! :D
+
+  - fnf = freedome never fades  
+
+README Copyright. Timothy Hobbs 2012.  CC-BY
+
+You are free to copy and distribute this README under the terms of the Creative Commons - Attribution licence 3.0 or later.
