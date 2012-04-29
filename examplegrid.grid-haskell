@@ -24,16 +24,16 @@ Grid
                   , code = "main"
                   , arguments = []
                   , next = Lambda
-                             { point = ( 0
-                                       , 0
+                             { point = ( 3
+                                       , 7
                                        )
                              , arguments = []
                              , arrow = ( 1
-                                       , 0
+                                       , 3
                                        )
                              , body = Action
                                         { point = ( 2
-                                                  , 0
+                                                  , 1
                                                   )
                                         , code = "getChar"
                                         , return = False
@@ -43,7 +43,7 @@ Grid
                                         , path = Nothing
                                         , next = Action
                                                    { point = ( 3
-                                                             , 0
+                                                             , 6
                                                              )
                                                    , code = "'n'"
                                                    , return = True
@@ -52,8 +52,8 @@ Grid
                                                    , label = Nothing
                                                    , path = Nothing
                                                    , next = Action
-                                                              { point = ( 4
-                                                                        , 0
+                                                              { point = ( 7
+                                                                        , 3
                                                                         )
                                                               , code = "(==)"
                                                               , return = True
@@ -62,8 +62,8 @@ Grid
                                                               , label = Nothing
                                                               , path = Nothing
                                                               , next = Return
-                                                                         { point = ( 5
-                                                                                   , 0
+                                                                         { point = ( 3
+                                                                                   , 10
                                                                                    )
                                                                          }
                                                               }
@@ -71,7 +71,7 @@ Grid
                                         }
                              , next = Which
                                         { point = ( 0
-                                                  , 3
+                                                  , 4
                                                   )
                                         , patterns = [ Pattern
                                                          { patternPoint = ( 2
@@ -113,16 +113,16 @@ Grid
                                                                           )
                                                          , pattern = "False"
                                                          , action = NewEmptyMVar
-                                                                      { point = ( -2
-                                                                                , 6
+                                                                      { point = ( 3
+                                                                                , 8
                                                                                 )
                                                                       , labelPoint = ( -1
                                                                                      , 6
                                                                                      )
                                                                       , mvar = "char"
                                                                       , next = Fork
-                                                                                 { point = ( -2
-                                                                                           , 7
+                                                                                 { point = ( 4
+                                                                                           , 3
                                                                                            )
                                                                                  , newThreads = [ Action
                                                                                                     { point = ( -4
@@ -135,7 +135,7 @@ Grid
                                                                                                     , label = Nothing
                                                                                                     , path = Nothing
                                                                                                     , next = PutMVar
-                                                                                                               { point = ( -4
+                                                                                                               { point = ( 2
                                                                                                                          , 10
                                                                                                                          )
                                                                                                                , labelPoint = ( -3
@@ -158,7 +158,7 @@ Grid
                                                                                                                    )
                                                                                                     , mvar = "char"
                                                                                                     , next = Action
-                                                                                                               { point = ( -1
+                                                                                                               { point = ( 4
                                                                                                                          , 12
                                                                                                                          )
                                                                                                                , code = "putChar"
@@ -177,12 +177,12 @@ Grid
                                                                                                                                                  , 12
                                                                                                                                                  )
                                                                                                                                        , next = SteppingStone
-                                                                                                                                                  { point = ( 1
+                                                                                                                                                  { point = ( -1
                                                                                                                                                             , 2
                                                                                                                                                             )
                                                                                                                                                   , next = PathDestination
-                                                                                                                                                             { point = ( 0
-                                                                                                                                                                       , 0
+                                                                                                                                                             { point = ( 3
+                                                                                                                                                                       , 7
                                                                                                                                                                        )
                                                                                                                                                              }
                                                                                                                                                   }
@@ -199,8 +199,8 @@ Grid
                              }
                   }
   , gridLooseCells = [ Action
-                         { point = ( 3
-                                   , 10
+                         { point = ( 2
+                                   , 9
                                    )
                          , code = "getChar"
                          , return = False
@@ -209,8 +209,8 @@ Grid
                          , label = Nothing
                          , path = Nothing
                          , next = End
-                                    { point = ( 3
-                                              , 11
+                                    { point = ( 5
+                                              , 5
                                               )
                                     }
                          }

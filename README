@@ -43,6 +43,98 @@ Jessica:  Look, now you can get the Haskarrow IDE in hot pink and perrywinkle bl
 
   - fnf = freedome never fades  
 
+***
+
+Despite the freedome of the fnf model being claimed throughout much of the open source world, I beleive that the fnf model cannot work in traditional programming environments when applied to applications of greater than trivial complexity.
+
+The Haskarrow model has some destinct advantages.  Being based on the purely functional programming language, Haskell, there will be no "side effects" caused by much of the code base.  There is always the risk, when editing a C program, that you will mutate some part of the global state which you shouldn't have mutated, and the result will be errors occuring elsewhere in the program.  For fnf to work, a person must be able to modify a small part of a code base without needing to understand the entirety of the application.
+
+The copy/paste ability of code is excedingly important to fnf.  Being able to copy a function from a fork, place it into my own code, and have it work, is essencial to making fnf work.  If the forks cannot "merge/pull from eachother" relatively painlessly, then a lot of duplicate effor will end up taking place.  Copying whole functions is already quite easy in a strictly typed language such as Haskell.  You place it in a hole with the same type, and you KNOW it fits.  I have tried to make it even easier with my ThreadObject model by making those holes easy to create/manage.  One of the major unsolved challenges of fnf is that of data-type compatibility.  If two forks use a slightly different data-type, then there will have to exist a cast, in order for new features from one fork, to be imported into the other.   This is an argument for good practices:
+
+a) Data abstraction:  If your data is a Tree, use Tree.  Don't make ever more complicated monolithic structures(I am guilty of this in my own implimentation of haskarrow). Rather build more complicated structures out of simpler ones.
+
+b) Type standardization:  This will happen in a darwinistic fashion.  When a type is a well designed one, more functions will get written arround it.  As more functions are written arround it and floating in haskarrow verse, it is more likely a developer will use that type.
+
+Another advantage of Haskarrow for fnf, is that of code orientation and readability.  The single most important design goal of using a visual language is to improve readability and orientation.  The time it takes to understand how a third party application works, so that the user can add a feature or fix a bug is the critical breaking point for fnf.  If I cannot figure out how the application works in a reasonable time frame, I cannot contribute to the project.
+
+One of the key things that I have learned from my work in Braille, is that orientatiting oneself in a data set and data intake are two very different processes.  A blind person, can take in data at roughly the same rate as a sighted person, yet they preform basic tasks on the computer as much as 16 times slower than the sighted individual!  Imagine a blind person is on a web page and they want to read a news article.  Their screen reader starts from the top of the page, going through advertisements and navigational links. On a web page that they do not know, they will spend minutes finding the text content that they wanted!
+
+Programmers today, face a task similar to that of the blind individual, when attempting to learn a new code base.  For the most part, we have to read, line by line, through files, at random, in order to get a clue as to what is going on.  Most open source programs I have looked at, don't even include a table of contents or some README-FOR-DEVS that might tell me which files and functions are interesting/important and which are not.
+
+One of the problems with including such a README-FOR-DEVS, is that as code bases change, the README becomes out of date.  This is why it is better, if such a structure is built into the code base fundimentally.
+
+Orientation is a task that the visual centers of our brain do excedingly well.  We can look at a diagram and pick out a word or pattern that we were looking for, far faster than we could read every title of every cell.  Time will tell, but I beleive that this model is fundimentally better than the plain text one.
+
+If visual programming is so better, why hasn't it taken off long ago?
+
+The UI's of the diagram editors I have used to date, have all be excedingly uncomfortable to use.  They have all used the same model. Point and click/drag and drop, and then type.  Editing a diagram using such a method is slow and cumbersome.  The table based model has a higher learning curve, but you will see for yourself that it is MUCH more convienient.  
+
+Visual programming langauges today fall into 4 categories.
+
+1) Archaic and API limited languages such a Drakon: Do not provide the tools that we need to write modern applications.  Drakon is a language that lives in all of our subconcousnesses, whether we know about computer programming or not.  Even though most people have never heard of the Drakon language, almost everyone has seen a Drakon, or Drakon derived diagram/flow chart.
+
+2) Esoteric languages such as Befunged:  Befunged is the language that sparked me to write grid haskell.  The grid based model for editing, and the cleaver looping mechanism both intrigued me.  I have been wanting to write a Visual Programming language for many years, but it wasn't untill I saw Befunged that I knew how.  Befunged is an essoteric language though.  It is not usefull.  There are many essoteric visual programing languages.  You should go on Wikipedia and check them out!
+
+3) Wrappers that generate code of a traditional plain text language:  Technically speaking, Haskarrow falls into this category.  At least for now.  Though Haskarrow can(and should) be compiled directly to binarry. The open source Drakon editor<http://drakon-editor.sourceforge.net/> can edit several traditional languages Java, C#, C/C++, Python, Tcl, Javascript and Erlang to be exact.  While I don't see their implementation as being bad, there is a lack of abstraction necessary to making it work well.  the Drakon editor lets you write Java, visually, or C visually.  But Java is not a visual programming language.  Haskarrow and Grid haskell are a significant abstractions from Haskell.  In no way, does the automatically generated code resemble typical Haskell code.
+
+4) Domain specific languages:  Visual domain specific languages are actually quite popular and widespread.  They probably outnumber and outreach the non visual domain specific languages.  One of the reasons for this, is that textual algorithms tend to be abstract, while visual paradigms have the tendency to be concrete.  If you want a programming language that will describe a work flow in a factory, you don't need the power of C.  Pictures have to jump through the hoops of flow logic in order to be imperitive.  They have a much greater declarative value than text however.  A great example of a popular visual programming language is that of gtk's xmlbuilder and glade, or Microsoft's XAML.  You may have never thought of these as being programming languages, since you aren't telling the computer HOW to do something, but rather WHAT to do.  That said, you probably find defining a user interface to be easier in gtk builder or XAML than in C++.
+
+Imediately, however, we come across the great limitation of declaritive visual languages.  The gui for Haskarrow IDE was not written using a gtkbuilder file.  This is because I wanted to use a GUI component(the grid based diagrams) which doesn't exist in gtkbuilder xml.  There is a fundimental lack of logic in the statically declarative visual language, that limits it unacceptably.
+
+Haskarrow's use of contexts is my attempt to get arround this limitation.
+
+***
+
+A network based programming language
+
+To the extent that the Haskarrow IDE is an IDE, it is also a web browser.  Almost every cell of a Haskarrow or Grid Haskell program is a hyperlink to another place in th Haskarrow verse.  This is fundimentally different from any other programming language you have ever used.  It creates destinct challenges of it's own.
+
+In the traditional method of software development there are two types of packaged software.  An application, and a library.  Libraries provide general functionality, while applications preform specific tasks.
+
+The traditional model has some dissadvantages.
+
+1) There is no clear line, between which functions are "general" and which "specific".  In purely functional languages, this line becomes even harder to find.  Almost every pure function is general and can be used in many places.  This is a big advantage to using a purely functional programming language, it would be a pitty to let it slip away.
+
+2) Libraries have versions, and don't always provide backwards compatibility.  This means, that old but good code becomes painfully obsolete :(
+
+3) Libraries are monolithic.  If I want to use 200 functions, from 200 libraries, I need 200 dependencies.
+
+I use an entirely different model.  When you browse the Haskarrow/gridHaskell web and you come across a function that you want to use, you press the "copy locally" button, and you use that function in your program.  The "copy locally" button downloads, that function, and all the other functions and data types which it relies upon, to your local Haskarrow web.  Each new copy includes a link going back to the online version.  You have just forked this function.  There is no need to wory that your program will break when the original author changes something, because you have your own static copy.  At the same time, you can still enjoy the benefit of updates to said function.  The Haskarrow IDE can simply follow the link back link every now and then, to see if anything has changed.  If so, you can look at the canges, decide if they are right for you, and accept them or decline them.  If you find a bug in the function, you can make a change upload it to github or wherever you are hosting your own personal Haskarrow web, and send a link to your new function to the author of the old.
+
+When you publish an application, all of the functions in your personal Haskarrow web go online.  Since the user who then downloads the source to your program is getting your own personal copies of all the functions used, the user will never experience dependency hell.
+
+This model has several chalenges of it's own.  
+
+- The first is legal.
+
+Our current Copyright system is fundimentally incompatible with the laws of informatics.  Information is not merely fundimentally easy to copy, information, by being expressed necessarilly leaves an impression.  My mind, is full of copyright works, which I "cannot unsee."  Even without wanting to, riding the tram to school, I see hundreds of copyright advertisements, the designs of buildings, I hear copyright music.  According to current copyright law, my very dreams are a massive infringement.  And "I cannot help but dream," as a copyrighted work by Evanecance flashes into my mind.  I cannot even help but think(and infringe)!
+
+Since the networked Haskarrow development model relies on the ability to copy, the ability to copy must be a guaranteed right. For this reason, all Haskarrow applications must be GPLed.  To prevent people from parasitically leaching off of the Haskarrow verse, I release all of my own haskarrow and grid haskell files under the GPL.
+
+The LGPL does not suffice for the haskarrow model.  Since we are trading individual functions, rather than packaged libraries, there would be no difference between LGPL and public domain.  A company could use any number of LGPL licenced haskarrow files in their project, claiming them to be libraries, without having to realease ANY of their own source code!
+
+I strongly discurrage you from using LGPL, and must note that with my version of the Haskarrow IDE, all haskarrow applications that you write MUST be licenced under the GPL, as ThreadedObject and other core API components are GPLed.
+
+One might complain that the GPL doesn't allow one to create comercial software.  We all need to eat.  I understand.  When I was a teen, I planned out my entire life arround being a citizen of free culture.  I planned to be a teacher, to put food on the table, and yet have enough time to devote to my work.  I also considered being a long haul truck driver and doing my software development by voice.  Or a garbage man.  Perhaps I should have chosen the later.  In school, all I hear about, is that teachers have no time, because they are bogged down with paperwork.
+
+I know there are people who want to make a career of software engineering, or already have.  I don't have a problem with loving software, and wishing to devote your life to it.  But I also understand that our copyright/patent system is fundumentally flawed.  One answer I have for you, is in the past.  In the so called dark ages intelectual work was preformed by monks of the Roman Catholic church.  Today, a similar roll is filled by a certain sector called Accedamia.  This is a serious method of intelectual creation.  Right now, accedemia is severly flawed, and in the US, moving in the wrong direction.  It's moving to be more and more proprietary and corporate sponsored.  This is pure corruption and evil.  The universities do not have a right to sell out their soles to corporate funders.  They are non comercial institutions(and taxed as such!).  They have enjoyed hundreds of years of donations from alumni and the benevolent rich.  These funders have intended their money to go towards the advancement of human knowledge.  University study belongs in the public domain.  I have noticed, lately that some universities are moving in the right direction.  They are posting their studies freely online, rather than publishing in closed off and expensive journals.
+
+Beside the "hippy extremist" such as myself, and the member of academia, there are many other ways to put food on the table and write code.  The key to making honest money, is in providing value to your costomer.  The value you provide as a programer, is not in selling a copy of your software, but in writing software which does not yet exist.  If I want to have a solution to a hard and unsolved problem, then I must pay a computer programmer to do so.  The place a programmer can provide the most value to a company is at the fronteres of computer science.  This makes computer science a constantly relevant, profitable, but mainly, exciting feild.  If someone needs to analize DNA or complex protines, control a satelite, improve the robotics in their factory, better controll their agricultural practices, ect. They need NEW code.  NEW code can be free code, and yet still of comercial value.  And as we all know, writting NEW code is the most fulfilling thing a person can do!  
+
+- The seccond great challenge is that of personal web clutter.  You could end up with many duplicate/similar functions in your web.  You might not know, what will happen if you edit one function that is used in many places arround your web.  I'm not sure what the solutions to this problem will be.  I need to finish writting the IDE so that I can better understand the problem.
+
+One must, is a feature that shows you where in your personal web a given function is used.  And another needed feature, is that upon "copy local" the haskarrow IDE would determine if an identical function already exists in the local web, and thus be able to ask the user what to do.
+
+***
+
+One last note.
+
+Computer programming isn't easy.  When one works on a large and complex project, simply holding everything in our heads can strech the limits of our working memory capacity.  I hope that the visual programming paradigm will make programming less stressfull, and make programming require less working memory.  The great demand on the programmer to hold large amounts of API information in working memory is not healthy.  It leads us computer programmers to hyperfocus, which has negative impacts on our ability to cook, eat, sleep, bath, do the laundry, excersize regularly, interact socially.  We're not all a bunch of autistics though.  We're more like drug adicts, getting high on light night screen light and dubstep.  I hope that by making it easier to orient ones self in a computer program, hyperfocus will become a less vital part of computer programming.  This will make us all a bit healthier.  Furthermore, I beleive that women are less willing to reduce themselves to the level of the stinky hungry and yet highly successfull nerd.  Perhaps, if computer programming was a healthier activity, more women would enjoy doing it.
+
+This written at 1pm, after a (till 4 o'clock) hacking session.
+
+----
+
 README Copyright. Timothy Hobbs 2012.  CC-BY
 
 You are free to copy and distribute this README under the terms of the Creative Commons - Attribution licence 3.0 or later.
