@@ -27,7 +27,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 >code :: Grid -> String
 >code grid =
->    (licenceCode        (gridLicence       grid )) ++
+>    "This is a computer generated file.  Do not edit.  For the purposes of the GPL, this file counts as object code and NOT source code!  Releasing this file does not suffice to say you have released your source.  Editing this file is NOT the prefered method of editing grid haskell.\n" ++
+>                        (message           grid )  ++ "\n" ++
+>    (licenceCode        (gridLicence       grid )) ++ "\n" ++
 >    (importsCode        (gridImports       grid )) ++
 >    (cellsCode          (gridCells         grid ))
 
@@ -52,7 +54,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 >pureFunctionsCode [] = ""
 
 >cellsCode :: Cell.Cell -> String
->cellsCode grid = actionsCode grid grid Scope.TopScope 0
+>cellsCode grid = actionsCode grid grid Scope.TopScope 0 False
 
 --------------------
 Unique symbol names
@@ -151,17 +153,17 @@ f1x1 v0x1  p1 p2  = return ((==) p1 p2 ) >>= \v1x1 ->f2x1 v0x1  v1x1
 >		" >>= \\" ++
 >		"value_" ++
 >		"->" ++
->		(functionCode (Cell.point next)) ++
+>		(functionCode (Cell.cellPoint next)) ++
 >		(valueCodesRHS values) ++
 >       if addValue
 >       then " value_ "
 >       else ""
 >		++ (stackCode stack)
 
->functionNext :: Cell.Cell -> Cell.Cell -> Scope.Scope -> Int -> String
->functionNext next top values stack =
+>functionNext :: Cell.Cell -> Cell.Cell -> Scope.Scope -> Int -> Bool -> String
+>functionNext next top values stack pure =
 >		"\n" ++
->		(actionsCode next top values stack)
+>		(actionsCode next top values stack pure)
 
 ------------
 Other Code Snippets
@@ -172,7 +174,7 @@ Other Code Snippets
 
 This is the code for the arguments which are passed to our grid in the Start Cell.
 
->argumentCodes :: [(Point,String)] -> String
+>argumentCodes :: [(Rectangle,String)] -> String
 >argumentCodes arguments =
 >    concatMap snd arguments
 
@@ -181,7 +183,7 @@ This is the code for the arguments which are passed to our grid in the Start Cel
 >forksCode :: [Cell.Cell] -> Scope.Scope -> Int -> String 
 >forksCode (child:children) values stack = 
 >   "forkIO (" ++
->   (functionCode (Cell.point child)) ++
+>   (functionCode (Cell.cellPoint child)) ++
 >   (valueCodesRHS values) ++
 >   (stackCode stack) ++ ");" ++
 >   (forksCode children values stack)
@@ -191,130 +193,136 @@ This is the code for the arguments which are passed to our grid in the Start Cel
 ----------------
 actionsCode
 
->actionsCode :: Cell.Cell -> Cell.Cell -> Scope.Scope -> Int -> [Char]
->actionsCode start@(Cell.Start _ prototype name arguments next) top _ _ =
+>actionsCode :: Cell.Cell -> Cell.Cell -> Scope.Scope -> Int -> Bool -> String
+
+>actionsCode start@(Cell.Start _ prototype name arguments pure next) top _ _ _ =
 >    prototype ++ "\n" ++
 >    name ++
 >    (argumentCodes arguments) ++ " = " ++
 >    "newEmptyMVar >>= " ++
->    (functionCode (Cell.point next)) ++
->    (functionNext next top (Scope.initialScope start) 0)
+>    (functionCode (Cell.cellPoint next)) ++
+>    (functionNext next top (Scope.initialScope start) 0 pure)
+
+----------------------------------------------------------------
+Functions in the IO monad are handled differently from others.  The last argument, "pure", will be false.
 
 We have one syntax for when push the value but don't pull the stack.
 
->actionsCode (Cell.Action p code preturn True False label path next) top values stack = 
->   functionHeader p values stack ++
+>actionsCode (Cell.Action common code preturn True False label path next) top values stack False = 
+>   functionHeader (Cell.commonPoint common) values stack ++
 >   (bodyCode code preturn 0) ++
 >   bindCode (Scope.addValueFromLabel values label) (isJust label) stack next ++
 >   "value_ " ++
->   (functionNext next top (Scope.addValueFromLabel values label) (stack + 1))
+>   (functionNext next top (Scope.addValueFromLabel values label) (stack + 1) False)
 
 Another syntax for when we pull the stack but don't push a value.
 
->actionsCode (Cell.Action p code preturn False True label path next) top values stack =
->   functionHeader p values stack  ++
+>actionsCode (Cell.Action common code preturn False True label path next) top values stack False =
+>   functionHeader (Cell.commonPoint common) values stack  ++
 >    (bodyCode code preturn stack) ++
 >    bindCode (Scope.addValueFromLabel values label) (isJust label) 0 next ++
->    functionNext next top (Scope.addValueFromLabel values label) 0
+>    functionNext next top (Scope.addValueFromLabel values label) 0 False
 
 A third syntax for when we both push and pull.
 
->actionsCode (Cell.Action p code preturn True True label path next) top values stack =
->	functionHeader p values stack ++
+>actionsCode (Cell.Action common code preturn True True label path next) top values stack False =
+>	functionHeader (Cell.commonPoint common) values stack ++
 >	(bodyCode code preturn stack) ++
 >	bindCode (Scope.addValueFromLabel values label) (isJust label) 0 next ++
 >   "value_ "++
->	functionNext next top (Scope.addValueFromLabel values label) 1
+>	functionNext next top (Scope.addValueFromLabel values label) 1 False
 
 And a forth syntax for when we simply preform an action without touching the stack.
 
->actionsCode (Cell.Action p code preturn False False label path next) top values stack =
->   functionHeader p values stack ++
+>actionsCode (Cell.Action common code preturn False False label path next) top values stack False =
+>   functionHeader (Cell.commonPoint common) values stack ++
 >   (bodyCode code preturn 0)     ++
 >   bindCode (Scope.addValueFromLabel values label) (isJust label) stack next ++
->   functionNext next top (Scope.addValueFromLabel values label) stack
+>   functionNext next top (Scope.addValueFromLabel values label) stack False
 
->actionsCode (Cell.Lambda point arguments arrow body next) top values stack =
->   functionHeader point values stack ++
+>actionsCode (Cell.Lambda common arguments arrow pure body next) top values stack False =
+>   functionHeader (Cell.commonPoint common) values stack ++
 >   "do lambda_ <- (" ++
 >   (bodyCode lambdaCode False 0) ++
 >   (valueCodesRHS values) ++ ");" ++
->   (functionCode (Cell.point next)) ++
+>   (functionCode (Cell.cellPoint next)) ++
 >   (valueCodesRHS values) ++
 >   (stackCode stack) ++
 >   "lambda_\n" ++
->   (functionNext body top (Scope.valuesAddByName values (map snd arguments)) 0) ++
->   (functionNext next top values (stack + 1))
+>   (functionNext body top (Scope.valuesAddByName values (map snd arguments)) 0 pure) ++
+>   (functionNext next top values (stack + 1) False)
 >     where
->       lambdaCode = (functionCode (Cell.point body))
+>       lambdaCode = (functionCode (Cell.cellPoint body))
 
->actionsCode (Cell.Which point patterns) top values 1 =
+>actionsCode (Cell.Which common patterns) top values 1 False =
 >   duplicationCode ++
 >   concatMap patternCode patterns ++
->   (concatMap (\(Cell.Pattern _ patternCode next) -> functionNext next top (Scope.addPattern values ("("++patternCode++")")) 0) patterns) 
+>   (concatMap (\(Cell.Pattern patternLabel next) -> functionNext next top (Scope.addPattern values ("("++(Cell.labelText patternLabel)++")")) 0 False) patterns) 
 >        where
 
 patternCode works by replacing the stack argument px with the pattern string.  This means that an item on the stack is consumed and applied to pattern matching.
 
 >  duplicationCode :: String
 >  duplicationCode =
->       (functionHeaderHead point values 0) ++ "pattern_ = " ++
->       "w"++(functionCode point) ++
+>       (functionHeaderHead (Cell.commonPoint common) values 0) ++ "pattern_ = " ++
+>       "w"++(functionCode (Cell.commonPoint common)) ++
 >		(valueCodesRHS values) ++ "pattern_ pattern_ \n"
 
 >  patternCode :: Cell.Pattern -> String
->  patternCode (Cell.Pattern _ patternCode next) =
->       "w"++(functionHeaderHead point (Scope.addPattern values ("("++patternCode++")")) 0) ++ "= " ++
->       (functionCode (Cell.point next)) ++
->		(valueCodesRHS (Scope.addPattern values ("("++patternCode++")"))) ++ "\n"
+>  patternCode (Cell.Pattern patternLabel next) =
+>       "w"++(functionHeaderHead (Cell.commonPoint common) (Scope.addPattern values ("("++(Cell.labelText patternLabel)++")")) 0) ++ "= " ++
+>       (functionCode (Cell.cellPoint next)) ++
+>		(valueCodesRHS (Scope.addPattern values ("("++(Cell.labelText patternLabel)++")"))) ++ "\n"
 
->actionsCode (Cell.Destination mypoint porigin value path next) top values stack =
->   actionsCode (Cell.Action mypoint value True True False (Just (mypoint, value)) path next) top values stack
+>actionsCode (Cell.Destination common porigin value path next) top values stack False =
+>   actionsCode (Cell.Action common value True True False (Just ((Cell.rectangle common), value)) path next) top values stack False
 	
->actionsCode (Cell.Jump p (Just path)) top values stack =
->	functionHeader p values stack ++
+>actionsCode (Cell.Jump common (Just path)) top values stack False =
+>	functionHeader (Cell.commonPoint common) values stack ++
 >	(functionCode (Path.destination path)) ++
 >   (valueCodesRHS (Scope.scopeAt (Path.destination path) top)) ++
 >   (stackCode stack)
 
->actionsCode (Cell.Fork p myNewThreads) top values stack =
->   functionHeader p values stack ++
+Note, that the last argument here, the "pure" argument, MUST be false!  There is no such thing as forking outside of IO.
+
+>actionsCode (Cell.Fork common myNewThreads) top values stack False =
+>   functionHeader (Cell.commonPoint common) values stack ++
 
 >   "do " ++ (forksCode (myNewThreads) values stack) ++
 
 >   "do signal <- takeMVar exit; putMVar exit signal; exitWith signal" ++
->   concatMap (\next->functionNext next top values stack) myNewThreads
+>   concatMap (\next->functionNext next top values stack False) myNewThreads
 
 The seccond value of NewEmptyMVar is the labelPoint.  The place where the lable is displayed has NO impact on the actual functioning of a grid.  It is esentially a comment.
 
->actionsCode (Cell.NewEmptyMVar p _ mvar next) top values stack =
->   functionHeader p values stack ++
+>actionsCode (Cell.NewEmptyMVar common mvarLabel next) top values stack False =
+>   functionHeader (Cell.commonPoint common) values stack ++
 
->   "do " ++ mvar ++ " <- newEmptyMVar;" ++
+>   "do " ++ (Cell.labelText mvarLabel) ++ " <- newEmptyMVar;" ++
 
->   (functionCode (Cell.point next)) ++ 
->   (valueCodesRHS (Scope.valueAddByName values mvar)) ++ 
+>   (functionCode (Cell.cellPoint next)) ++ 
+>   (valueCodesRHS (Scope.valueAddByName values (Cell.labelText mvarLabel))) ++ 
 >   (stackCode stack) ++
->   functionNext next top (Scope.valueAddByName values mvar) stack
+>   functionNext next top (Scope.valueAddByName values (Cell.labelText mvarLabel)) stack False
 
->actionsCode (Cell.PutMVar p _ mvar next) top values stack =
->  actionsCode (Cell.Action p code False False True Nothing Nothing next) top values stack
->    where code = "putMVar "++mvar
+>actionsCode (Cell.PutMVar common mvarLabel next) top values stack False =
+>  actionsCode (Cell.Action common code False False True Nothing Nothing next) top values stack False
+>    where code = "putMVar "++(Cell.labelText mvarLabel)
 
->actionsCode (Cell.TakeMVar p _ mvar next) top values stack =
->  actionsCode (Cell.Action p code False True False Nothing Nothing next) top values stack
->    where code = "takeMVar "++mvar
+>actionsCode (Cell.TakeMVar common mvarLabel next) top values stack False =
+>  actionsCode (Cell.Action common code False True False Nothing Nothing next) top values stack False
+>    where code = "takeMVar "++(Cell.labelText mvarLabel)
 
->actionsCode (Cell.Return point) top values stack =
->  functionHeader point values stack ++
+>actionsCode (Cell.Return common) top values stack False =
+>  functionHeader (Cell.commonPoint common) values stack ++
 >  "return p" ++ (show stack)
 
->actionsCode (Cell.End p) top values stack =
->   functionHeader p values stack ++
+>actionsCode (Cell.End common) top values stack False =
+>   functionHeader (Cell.commonPoint common) values stack ++
 >   "return ()"
 
->actionsCode (Cell.Exit p signal) top values stack =
->   functionHeader p values stack ++
->   "putMVar exit " ++ signal ++ " >> exitWith " ++ signal
+>actionsCode (Cell.Exit common) top values stack False =
+>   functionHeader (Cell.commonPoint common) values stack ++
+>   "putMVar exit p1 >> exitWith p1"
 
->actionsCode cell top values stack = error $ "Incomplete pattern match processing cell:" ++ (show cell) ++ " with top cell of " ++ (show top) ++ "scope of" ++ (show values) ++ " and a stack of "++ (show stack)
+>actionsCode cell top values stack pure = error $ "Incomplete pattern match processing cell:" ++ (show cell) ++ " with top cell of " ++ (show top) ++ "scope of" ++ (show values) ++ " and a stack of "++ (show stack) ++ " in code that was Pure/IO:" ++ (show pure)

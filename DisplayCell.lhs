@@ -28,32 +28,35 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 | A display cell is a cell which literally gets shown on the screen.  This includes not only the excecutable Cells but also the Comments and Paths which help the user understand how the grid's plumbing works.
 
 >data DisplayCell = DisplayCellCode Cell.Cell
->                 | DisplayCellComment Grid.Comment
->                 | DisplayCellArgument Super.Point String
+>                 | DisplayCellComment Cell.Label
+>                 | DisplayCellArgument Cell.Label
+>                 | DisplayCellStaticLabel Cell.Label
 >                 | DisplayCellPattern Cell.Pattern
->                 | DisplayCellMVarLabel Super.Point String
+>                 | DisplayCellMVarLabel Cell.Label
 >                 | DisplayCellPath Path.Path
->                 | DisplayCellBlank Super.Point
+>                 | DisplayCellBlank Super.Rectangle
 >   deriving (Show)
 
    
 >displayCellPoint :: DisplayCell -> Super.Point
->displayCellPoint (DisplayCellCode      cell)    = Cell.point    cell
->displayCellPoint (DisplayCellComment   comment) = Grid.commentPoint comment
->displayCellPoint (DisplayCellBlank     point)   = point
+>displayCellPoint (DisplayCellCode      cell)    = Cell.cellPoint    cell
+>displayCellPoint (DisplayCellComment   comment) = Cell.labelPoint comment
+>displayCellPoint (DisplayCellBlank     rectangle)   = Super.rectanglePoint rectangle
 >displayCellPoint (DisplayCellPath      path)    = Path.point path
->displayCellPoint (DisplayCellArgument  point _) = point
->displayCellPoint (DisplayCellMVarLabel point _) = point
->displayCellPoint (DisplayCellPattern   pattern) = Cell.patternPoint pattern
+>displayCellPoint (DisplayCellArgument  argument) = Cell.labelPoint argument
+>displayCellPoint (DisplayCellMVarLabel label) = Cell.labelPoint label
+>displayCellPoint (DisplayCellStaticLabel label) = Cell.labelPoint label
+>displayCellPoint (DisplayCellPattern   pattern) =  Cell.patternPoint pattern
 
 >displayCellText :: DisplayCell -> String
 >displayCellText (DisplayCellCode      cell)    = Cell.cellText    cell
->displayCellText (DisplayCellComment   comment) = Grid.commentText comment
+>displayCellText (DisplayCellComment   comment) = Cell.labelText comment
 >displayCellText (DisplayCellBlank     _)       = ""
 >displayCellText (DisplayCellPath      _)       = ""
->displayCellText (DisplayCellArgument  _ t)     = t
->displayCellText (DisplayCellMVarLabel _ t)     = t
->displayCellText (DisplayCellPattern   pattern) = Cell.pattern pattern
+>displayCellText (DisplayCellArgument  label)   = Cell.labelText label
+>displayCellText (DisplayCellMVarLabel label)   = Cell.labelText label
+>displayCellText (DisplayCellStaticLabel label)   = Cell.labelText label
+>displayCellText (DisplayCellPattern   pattern) = snd $ Cell.patternLabel pattern
 
 
 >displayCellBlank :: DisplayCell -> Bool
@@ -70,8 +73,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 >displayCellList :: Grid.Grid -> [DisplayCell]
 >displayCellList grid = sortBy compareCells $
 >       (displayCellsfromCells (Grid.gridCells grid)) ++ 
->       (concatMap displayCellsfromCells (Grid.gridLooseCells grid)) ++
->       (displayCellsfromComments (Grid.gridComments grid))
+>       (concatMap displayCellsfromCells (Grid.gridLooseCells grid))
     
 >compareCells :: DisplayCell -> DisplayCell -> Ordering
 >compareCells c1 c2 = if (swap (displayCellPoint c1)) > (swap (displayCellPoint c2)) then GT else LT
@@ -93,7 +95,7 @@ fill that point with the next cell in the list and append the rest of the displa
 
 otherwise put a blank cell at mypoint and append the rest of the display cells.
 
->    else DisplayCellBlank mypoint :  displayCellsTail (displayCell:displayCells)
+>    else DisplayCellBlank (mypoint,Super.smallRectangle) :  displayCellsTail (displayCell:displayCells)
 > where displayCellsTail leftOverDisplayCells=
 
 Fill out the rest of the DisplayCell list.  
@@ -123,8 +125,8 @@ The extreme point is (3,3) but there is no content to go there.
 
 >filledinDisplayCellList' [] mypoint minimum maximum =
 >    if mypoint == maximum
->    then [(DisplayCellBlank mypoint)]
->    else (DisplayCellBlank mypoint) : 
+>    then [(DisplayCellBlank (mypoint,Super.smallRectangle))]
+>    else (DisplayCellBlank (mypoint,Super.smallRectangle)) : 
 >    (filledinDisplayCellList' []  (nextPoint mypoint minimum maximum) minimum maximum)
 
 | The 'nextPoint' as taken from left to right, top to bottom.
@@ -143,13 +145,13 @@ The extreme point is (3,3) but there is no content to go there.
 
 DisplayCellArguments
 
->       Cell.Start{}  -> map (\(argumentPoint,argumentName) -> DisplayCellArgument argumentPoint argumentName) (Cell.arguments cell)
+>       Cell.Start{}  -> map (\argument -> DisplayCellArgument argument) (Cell.arguments cell)
 
 DisplayCellPatterns
 
 >       Cell.Which{} -> map (\pattern-> DisplayCellPattern pattern) (Cell.patterns cell)
 
->       Cell.Lambda{} -> DisplayCellArgument (Cell.arrow cell) "->" : map (\(argumentPoint,argumentName) -> DisplayCellArgument argumentPoint argumentName) (Cell.arguments cell)
+>       Cell.Lambda{} -> DisplayCellStaticLabel ((Cell.arrow cell), "->") : map (\argument -> DisplayCellArgument argument) (Cell.arguments cell)
 
 DisplayCellMVarLabels
 
@@ -161,7 +163,7 @@ DisplayCellPaths
 
 >       Cell.Action{}       -> (displayCellsfromPath (Cell.path cell)) ++
 >                              case Cell.label cell of
->                                Just (point, label) -> [DisplayCellMVarLabel point label]
+>                                Just label -> [DisplayCellMVarLabel label]
 >                                Nothing             -> []
 >       Cell.Jump{}         -> (displayCellsfromPath (Cell.path cell))
 >       Cell.Destination{}  -> (displayCellsfromPath (Cell.path cell))
@@ -170,11 +172,11 @@ DisplayCellPaths
 
 cellNext gives us a list, because in the case of Fork or Which we will end up with more than one of them of them.  This map gives us a type [[DisplayCell]] so we need to concat it.
 
->          (concatMap displayCellsfromCells (Cell.cellNext cell))
+>          (concatMap displayCellsfromCells (Cell.cellsNext cell))
 
 >displayCellMVarLabel :: Cell.Cell -> DisplayCell
 >displayCellMVarLabel cell =
->   DisplayCellMVarLabel (Cell.labelPoint cell) (Cell.mvar cell)
+>   DisplayCellMVarLabel (Cell.mvarLabel cell)
 
 >displayCellsfromPath :: (Maybe Path.Path) -> [DisplayCell]
 >displayCellsfromPath (Just p)   = displayCellsfromPath' p
@@ -187,7 +189,3 @@ cellNext gives us a list, because in the case of Fork or Which we will end up wi
 >             (displayCellsfromPath' (Path.next p))
 >displayCellsfromPath' p@Path.PathDestination{} =
 >             []
-    
->displayCellsfromComments :: [Grid.Comment] -> [DisplayCell]
->displayCellsfromComments comments = 
->     map (\comment -> (DisplayCellComment comment)) comments

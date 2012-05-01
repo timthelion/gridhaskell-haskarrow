@@ -24,30 +24,39 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 Patterns are owned by which statements.
 
->data Pattern = Pattern {patternPoint   :: Super.Point,
->                        pattern        :: String, 
+>data Pattern = Pattern {patternLabel   :: Label, 
 >                        action         :: Cell}
 >           deriving(Show,Read)
 
+>type Label = (Super.Rectangle, String)
+
+>data CellCommon = CellCommon {
+>        rectangle :: Super.Rectangle,
+>        comments  :: [Label]     
+>   }
+>   deriving(Show,Read)
 
 | Cells are the main data type used.  All grid haskell commands are cells.  There is a tree of cells which is our program.  These cells get precompiled to haskell code.
              
 >data Cell = 
 >    Start {
->        point     :: Super.Point,
+>        common    :: CellCommon,
 >        prototype :: Super.Prototype,
 
  | Name of grid
 
 >        code      :: String,
 
->        arguments :: [(Super.Point,String)],
+>        arguments :: [Label],
+
+>        pure      :: Bool,
 
 >        next      :: Cell}
 
 
 >  | Action {
->        point     :: Super.Point,
+>        common    :: CellCommon,
+
 >        code      :: String,
 
 | True if it is a pure function false if it is of type IO.  The grid haskell precompiler compiles to something that looks like 
@@ -69,7 +78,7 @@ The getChar function has type IO Char and thus does not need to be "returned." T
 
 |  Path to any far away place where return value of action is used.  Sometimes the stack isn't very usefull though, and we really need to carry a value to another place in the code.  We want to make this as bright visual and clear as possible, so we make a path or line on the screen that shows where each value goes(is used).
 
->        label     :: Maybe (Super.Point, String),
+>        label     :: Maybe Label,
 
 >        path      :: (Maybe Path.Path), 
 
@@ -78,11 +87,14 @@ The getChar function has type IO Char and thus does not need to be "returned." T
 >        next      :: Cell} 
 
 >  | Lambda {
->        point     :: Super.Point,
+>        common    :: CellCommon,
 
->        arguments :: [(Super.Point,String)],
+>        arguments :: [Label],
 
->        arrow     :: Super.Point,
+>        arrow     :: Super.Rectangle,
+
+>        pure      :: Bool,
+
 >        body      :: Cell,
 
 >        next      :: Cell}
@@ -91,7 +103,7 @@ The getChar function has type IO Char and thus does not need to be "returned." T
 |  Destination place where we take a value that was aquired a while ago and place it on the stack
 
 >  | Destination {
->        point     :: Super.Point, 
+>        common    :: CellCommon,
 
 | Origin place where the value was aquired/returned.
 
@@ -107,7 +119,7 @@ The getChar function has type IO Char and thus does not need to be "returned." T
 Which statement.  One example of how visual programming may be better than textual.
 
 >  | Which {
->        point     :: Super.Point,
+>        common    :: CellCommon,
 >        patterns  :: [Pattern]}
 
 | Jump to an earlier point in the code(that point being the destination of the path).
@@ -115,13 +127,13 @@ Which statement.  One example of how visual programming may be better than textu
 We use Maybe for type consistency.  path should never be Nothing here though.
 
 >  | Jump {
->        point     :: Super.Point,
+>        common    :: CellCommon,
 >        path      :: (Maybe Path.Path)}  
  
 Forking is a very important process in grid haskell.  It should be encouraged rather than discouraged.  Grid haskell is intended to make forking visual and intuitive...
 
 >  | Fork {
->        point     :: Super.Point,
+>        common    :: CellCommon,
 >        newThreads:: [Cell]}
 
 These MVar cells have two points.  Why?  They are displayed on the screen like this:
@@ -130,38 +142,34 @@ These MVar cells have two points.  Why?  They are displayed on the screen like t
 \typical point/      \ labelPoint /
 
 >  | NewEmptyMVar {
->        point     :: Super.Point,
->        labelPoint:: Super.Point,
->        mvar      :: String,
+>        common    :: CellCommon,
+>        mvarLabel :: Label, 
 >        next      :: Cell}
 
  
 >  | TakeMVar {
->        point     :: Super.Point,
->        labelPoint:: Super.Point,
->        mvar      :: String,
+>        common    :: CellCommon,
+>        mvarLabel :: Label, 
 >        next      :: Cell}
 
 
 >  | PutMVar {
->        point     :: Super.Point,
->        labelPoint:: Super.Point,
->        mvar      :: String,
+>        common    :: CellCommon,
+>        mvarLabel :: Label, 
 >        next      :: Cell}
 
 Return the last value in the stack.
 
->  | Return{point  :: Super.Point}
+>  | Return{common    :: CellCommon}
 
 End of thread.  Stop, and wait for Exit. 
 
->  | End{point     :: Super.Point}
+>  | End{common    :: CellCommon}
 
 
 Exit program, sending signal to all other threads to exit as well.
 
->  | Exit{point     :: Super.Point,
->         signal    :: String}
+>  | Exit{common    :: CellCommon}
 
 As stated earlier, we use show and read to save this to a file.
 
@@ -172,7 +180,7 @@ As stated earlier, we use show and read to save this to a file.
 >cellText :: Cell -> String
 >cellText cell@Start{}        = code cell
 >cellText cell@Action{}       = code cell
->cellText Lambda{}            = "Lambda"
+>cellText Lambda{}            = "λ"
 >cellText Which{}             = "Which"
 >cellText cell@Destination{}  = value cell
 >cellText Jump{}              = "Jump"
@@ -186,15 +194,18 @@ As stated earlier, we use show and read to save this to a file.
 
 We use this to build a list of cells for display on the screen.
 
->cellNext :: Cell -> [Cell]
->cellNext cell@Jump{}     = []
->cellNext cell@Return{}   = []
->cellNext cell@End{}      = []
->cellNext cell@Exit{}     = []
->cellNext cell@Fork{}     = newThreads cell
->cellNext cell@Which{}    = map action (patterns cell)
->cellNext cell@Lambda{}   = next cell : body cell : []
->cellNext cell            = [next cell]
+>cellsNext :: Cell -> [Cell]
+>cellsNext cell@Jump{}     = []
+>cellsNext cell@Return{}   = []
+>cellsNext cell@End{}      = []
+>cellsNext cell@Exit{}     = []
+>cellsNext cell@Fork{}     = newThreads cell
+>cellsNext cell@Which{}    = map action (patterns cell)
+>cellsNext cell@Lambda{}   = next cell : body cell : []
+>cellsNext cell            = [next cell]
+
+>cellPoint :: Cell -> Super.Point
+>cellPoint cell = fst (rectangle (common cell))
 
 >cellPutCode :: Cell -> String -> Maybe Cell
 >cellPutCode _ "Fork"        = Nothing
@@ -206,7 +217,7 @@ We use this to build a list of cells for display on the screen.
 >cellPutCode cell@Start{}  code' = Just cell{code=code'}
 >cellPutCode cell@Action{} code' = Just cell{code=code'}
 
->cellPutCode cell@Exit{} signal' = Just cell{signal=signal'}
+>cellPutCode _ _ = Nothing
 
 |Put the first cell into the list of cells, at the point of the cell.  We return a tuple with our new tree of cells, plus the cells that used to come after the cell we just replaced.
 
@@ -214,14 +225,14 @@ We use this to build a list of cells for display on the screen.
 
 >cellPutCell cell cells@Which{} =
 > (cells',strays)
-> where (cells',strays) = if (point cell) == (point cells)
->                          then (cell,cellNext cells)
+> where (cells',strays) = if cellPoint cell == cellPoint cells
+>                          then (cell,cellsNext cells)
 >                          else (cells{patterns=map (\pattern -> pattern{action=fst (cellPutCell cell (action pattern))}) (patterns cells)},[])
 
 >cellPutCell cell cells@Fork{} =
 > (cells',strays)
-> where (cells',strays) = if (point cell) == (point cells)
->                          then (cell,cellNext cells)
+> where (cells',strays) = if  cellPoint cell == cellPoint cells
+>                          then (cell,cellsNext cells)
 >                          else (cells{newThreads=map (\nextCells -> fst (cellPutCell cell nextCells)) (newThreads cells)},[])
 
 >cellPutCell cell cells@Jump{} =
@@ -233,8 +244,8 @@ We use this to build a list of cells for display on the screen.
 
 >cellPutCell cell cells =
 > (cells',strays)
-> where (cells',strays) = if (point cell) == (point cells)
->                          then (cell,cellNext cells)
+> where (cells',strays) = if  cellPoint cell == cellPoint cells
+>                          then (cell,cellsNext cells)
 >                          else (cells{next=fst(cellPutCell cell (next cells))},[])
 
 | Returns a new cell with the list of point1s reloacted to their corresponding point2s in the (point1,point2) tuples.
@@ -249,7 +260,7 @@ We use this to build a list of cells for display on the screen.
 >cellPointsRelocation originalCells@Action{} relocations  =
 >  (cellPointsRelocation' originalCells relocations){
 >  label = case (label originalCells) of
->            Just (p,s) -> Just (relocatePoint p relocations, s)
+>            Just label -> Just $ labelRelocation label relocations
 >            Nothing    -> Nothing,
 >  path = case (path originalCells) of
 >            Just path -> Just $ pathPointsRelocation path relocations
@@ -260,7 +271,7 @@ We use this to build a list of cells for display on the screen.
 >cellPointsRelocation originalCells@Lambda{} relocations  =
 >  (cellPointsRelocation' originalCells relocations){
 >  arguments = argumentsPointsRelocation (arguments originalCells) relocations,
->  arrow = relocatePoint (arrow originalCells) relocations,
+>  arrow = rectangleRelocation (arrow originalCells) relocations,
 >  body  = cellPointsRelocation (body originalCells) relocations,
 >  next  = cellPointsRelocation (next originalCells) relocations
 >  }
@@ -304,13 +315,12 @@ We use this to build a list of cells for display on the screen.
 >cellPointsRelocation' :: Cell -> [(Super.Point,Super.Point)] -> Cell
 >cellPointsRelocation' originalCells relocations  =
 > originalCells{
->   point = relocatePoint (point originalCells) relocations}
+>   common = commonRelocation (common originalCells) relocations}
 
->argumentsPointsRelocation :: [(Super.Point,String)] ->  [(Super.Point,Super.Point)] -> [(Super.Point,String)]
+>argumentsPointsRelocation :: [Label] ->  [(Super.Point,Super.Point)] -> [Label]
 >argumentsPointsRelocation arguments relocations =
 > map
->   (\argument ->
->     (relocatePoint (fst argument) relocations,snd argument))
+>   (\label -> labelRelocation label relocations)
 >   arguments
 
 >pathPointsRelocation :: Path.Path -> [(Super.Point,Super.Point)] -> Path.Path
@@ -322,17 +332,23 @@ We use this to build a list of cells for display on the screen.
 
 >patternPointsRelocation :: Pattern -> [(Super.Point,Super.Point)] -> Pattern
 >patternPointsRelocation pattern relocations =
->  pattern{
->   patternPoint = relocatePoint (patternPoint pattern) relocations,
->   action = cellPointsRelocation (action pattern) relocations}
+>  pattern{patternLabel = labelRelocation (patternLabel pattern) relocations}
 
->mvarPointsRelocation :: Cell ->  [(Super.Point,Super.Point)] -> Cell
+>mvarPointsRelocation :: Cell -> [(Super.Point,Super.Point)] -> Cell
 >mvarPointsRelocation originalCells relocations =
 >  (cellPointsRelocation' originalCells relocations){
->   labelPoint = relocatePoint (labelPoint originalCells) relocations,
+>   mvarLabel = labelRelocation (mvarLabel originalCells) relocations,
 >   next = cellPointsRelocation (next originalCells) relocations
 >   }
 
+>labelRelocation :: Label -> [(Super.Point,Super.Point)] -> Label
+>labelRelocation (rectangle,string) relocations = (rectangleRelocation rectangle relocations,string)
+
+>commonRelocation :: CellCommon -> [(Super.Point,Super.Point)] -> CellCommon
+>commonRelocation common relocations = common{rectangle = rectangleRelocation (rectangle common) relocations}
+
+>rectangleRelocation :: Super.Rectangle ->  [(Super.Point,Super.Point)] -> Super.Rectangle
+>rectangleRelocation (point,size) relocations = (relocatePoint point relocations,size)
 
 >relocatePoint :: Super.Point -> [(Super.Point,Super.Point)] -> Super.Point
 >relocatePoint point relocations =
@@ -349,28 +365,50 @@ We use this to build a list of cells for display on the screen.
 
 >cellPointFilled :: Cell -> Super.Point -> Bool
 >cellPointFilled cell pointToCheck =
-> if pointToCheck == (point cell)
+> if pointToCheck == cellPoint cell
 > then True
 > else (case cell of
 >  Start{} ->
->   or $ map (\(point,_) -> point == pointToCheck) (arguments cell)
+>   any (\label -> labelPointFilled label pointToCheck) (arguments cell)
 >  Action{} -> (case (label cell) of
->               Just (point,_) -> point == pointToCheck
+>               Just label -> labelPointFilled label pointToCheck
 >               Nothing         -> False) ||
 >              (case (path cell) of
 >               Just path -> Path.pathPointFilled path pointToCheck
 >               Nothing   -> False)
->  Lambda{} -> (or $ map (\(point,_) -> point == pointToCheck) (arguments cell)) ||
->              (arrow cell == pointToCheck)
+>  Lambda{} -> (any (\label -> labelPointFilled label pointToCheck) (arguments cell)) ||
+>              (rectanglePointFilled (arrow cell) pointToCheck)
 >  Destination{} -> case (path cell) of
 >                    Just path -> Path.pathPointFilled path pointToCheck
 >                    Nothing -> False
->  Which{} -> or $ map (\pattern->(patternPoint pattern)==pointToCheck) (patterns cell)
+>  Which{} -> or $ map (\pattern -> labelPointFilled (patternLabel pattern) pointToCheck) (patterns cell)
 >  Jump{}  -> case (path cell) of
 >              Just path -> Path.pathPointFilled path pointToCheck
 >              Nothing -> False
->  NewEmptyMVar{} -> labelPoint cell == pointToCheck
->  TakeMVar{}     -> labelPoint cell == pointToCheck
->  PutMVar{}      -> labelPoint cell == pointToCheck
+>  NewEmptyMVar{} -> labelPointFilled (mvarLabel cell) pointToCheck
+>  TakeMVar{}     -> labelPointFilled (mvarLabel cell) pointToCheck
+>  PutMVar{}      -> labelPointFilled (mvarLabel cell) pointToCheck
 >  otherwise      -> False) ||
->  (or $ map (\cell->cellPointFilled cell pointToCheck) (cellNext cell))
+>  (or $ map (\cell->cellPointFilled cell pointToCheck) (cellsNext cell))
+
+| Is the point covered by the label?
+
+>labelPointFilled :: Label -> Super.Point -> Bool
+>labelPointFilled (rectangle,_) point = rectanglePointFilled rectangle point
+
+| Is the point inside the Rectangle?
+
+>rectanglePointFilled :: Super.Rectangle -> Super.Point -> Bool
+>rectanglePointFilled ((rx,ry),(rw,rh)) (px,py) = (px >= rx && px < rx + rw) && (py >= ry && py < ry + rh)
+
+>labelPoint :: Label -> Super.Point
+>labelPoint (rectangle,_) = Super.rectanglePoint rectangle
+
+>labelText :: Label -> String
+>labelText (_,string) = string
+
+>commonPoint :: CellCommon -> Super.Point
+>commonPoint common = Super.rectanglePoint $ rectangle common
+
+>patternPoint :: Pattern -> Super.Point
+>patternPoint pattern = labelPoint (patternLabel pattern)

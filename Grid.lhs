@@ -19,14 +19,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 >import qualified Cell
 >import Super
 
->type Comment = (Point,String)
-
->commentPoint :: Comment -> Point
->commentPoint (p,_) = p
-
->commentText :: Comment -> String
->commentText (_,t) = t
-
 | Grid is our file type.  We read it and show it to load and unload the grid haskell files.
 
 >data Grid = Grid{
@@ -37,7 +29,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 >        gridName          :: String,
 >        gridLicence       :: String,
 >        gridImports       :: [String],
->        gridComments      :: [Comment],
 >        gridCells         :: Cell.Cell,
 >        gridLooseCells    :: [Cell.Cell]}
 > deriving (Read, Show)
@@ -49,14 +40,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 >       gridName          = "",
 >       gridLicence       = "",
->       gridImports       = [""],
->       gridComments      = [],
->       gridCells         = Cell.End (0,0),
->       gridLooseCells    = []}
-
->gridPutComment :: Point -> String -> Grid -> Grid
->gridPutComment point comment grid =
->  grid{gridComments=((point,comment):(filter (\comment -> not $ point == (fst comment)) (gridComments grid)))} 
+>       gridImports       = [],
+>       gridCells         = Cell.End (Cell.CellCommon ((0,0),(1,1)) []),
+>       gridLooseCells    = []} 
 
 Put the cell at the point specified into the grid.
 
@@ -77,17 +63,13 @@ Put the cell at the point specified into the grid.
 >pointFilledGrid :: Grid -> Point -> Bool
 >pointFilledGrid grid point =
 
-Match to comments.
-
->  (or $ map (\(gridPoint,_)->gridPoint == point) (gridComments grid)) ||
-
-Or cells
+Cells
 
 >  (Cell.cellPointFilled (gridCells grid) point) ||
 
 Or loose cells
 
->  (or $ map (\cell->Cell.cellPointFilled cell point) (gridLooseCells grid))
+>  (any (\cell->Cell.cellPointFilled cell point) (gridLooseCells grid))
 
 >pointsFilledGrid :: Grid -> [Point] -> Bool
->pointsFilledGrid grid points = or $ map (pointFilledGrid grid) points
+>pointsFilledGrid grid points = any (pointFilledGrid grid) points

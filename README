@@ -21,6 +21,12 @@ Me: Ok, great, fnf and I'll pull from you when you're done.
 
   - fnf = fork it and fix it
   
+Olga: I wana redo the Haskarrow IDE in 3D!
+
+ME: Ok, fnf!
+
+  - fnf = fork it and have fun
+  
 Joe: You use VI hotkeys for navigation.  Emacs FTW, your software sux!!!111
 
 Me:  If you don't like it, fnf.
@@ -53,11 +59,17 @@ Despite the freedome of the fnf model being claimed throughout much of the open 
 
 The Haskarrow model has some destinct advantages.  Being based on the purely functional programming language, Haskell, there will be no "side effects" caused by much of the code base.  There is always the risk, when editing a C program, that you will mutate some part of the global state which you shouldn't have mutated, and the result will be errors occuring elsewhere in the program.  For fnf to work, a person must be able to modify a small part of a code base without needing to understand the entirety of the application.
 
-The copy/paste ability of code is excedingly important to fnf.  Being able to copy a function from a fork, place it into my own code, and have it work, is essencial to making fnf work.  If the forks cannot "merge/pull from eachother" relatively painlessly, then a lot of duplicate effor will end up taking place.  Copying whole functions is already quite easy in a strictly typed language such as Haskell.  You place it in a hole with the same type, and you KNOW it fits.  I have tried to make it even easier with my ThreadObject model by making those holes easy to create/manage.  One of the major unsolved challenges of fnf is that of data-type compatibility.  If two forks use a slightly different data-type, then there will have to exist a cast, in order for new features from one fork, to be imported into the other.   This is an argument for good practices:
+The copy/paste ability of code is excedingly important to fnf.  Being able to copy a function from a fork, place it into my own code, and have it work, is essencial to making fnf work.  If the forks cannot "merge/pull from eachother" relatively painlessly, then a lot of duplicate effor will end up taking place.
+
+A great example of copy paste style FNF is the development of elisp modules for GNU Emacs.  You'd be amazed at the kind of software development that goes on through people simple copy pasting bits of other people's .emacs files.  GNU Emacs is the test case that PROVES fnf can work on a large scale.  In many ways, Haskarrow is my own personal responce to the limitations of ELisp.  That is limited domain(can pretty much be used only for programs that manipulate text.) Clutter, unrelated tasks get pulled together into Emacs rather than becoming their own programs.  Difficulty of distribution(this is reltated to the clutter) because you can't easilly isolate a single component of the program.  Performance, due to clutter and the lack of performance potential of Elisp.
+
+Copying whole functions is already quite easy in a strictly typed language such as Haskell.  You place it in a hole with the same type, and you KNOW it fits.  I have tried to make it even easier with my ThreadObject model by making those holes easy to create/manage.  One of the major unsolved challenges of fnf is that of data-type compatibility.  If two forks use a slightly different data-type, then there will have to exist a cast, in order for new features from one fork, to be imported into the other.   This is an argument for good practices:
 
 a) Data abstraction:  If your data is a Tree, use Tree.  Don't make ever more complicated monolithic structures(I am guilty of this in my own implimentation of haskarrow). Rather build more complicated structures out of simpler ones.
 
 b) Type standardization:  This will happen in a darwinistic fashion.  When a type is a well designed one, more functions will get written arround it.  As more functions are written arround it and floating in haskarrow verse, it is more likely a developer will use that type.
+
+c) Record syntax:  For the most part, we can make functions seamlessly handle changes in data's, if we use proper record syntax rather than positional reference.
 
 Another advantage of Haskarrow for fnf, is that of code orientation and readability.  The single most important design goal of using a visual language is to improve readability and orientation.  The time it takes to understand how a third party application works, so that the user can add a feature or fix a bug is the critical breaking point for fnf.  If I cannot figure out how the application works in a reasonable time frame, I cannot contribute to the project.
 
@@ -154,3 +166,7 @@ This written from bed at 1pm, after a (till 4 o'clock in the morning) hacking se
 README Copyright. Timothy Hobbs 2012.  CC-BY
 
 You are free to copy and distribute this README under the terms of the Creative Commons - Attribution licence 3.0 or later.
+
+----
+
+FNF is anarchy, FNF is the furious nameles fire which corporate America so much fears!

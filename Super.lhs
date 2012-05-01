@@ -28,6 +28,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 >type Point   = (Int, Int)
 
+>type Nat     = Int -- :( Will wait for better natural number support.
+
+(Width,Heigth)
+
+>type Size    = (Nat, Nat)
+
+>type Rectangle = (Point, Size)
+
 >subtractPoint :: Point -> Point -> Point
 >subtractPoint a b = ((fst a) - (fst b),(snd a) - (snd b))
 
@@ -35,3 +43,11 @@ Here we have the version of the whole grid haskell project.
 
 >version :: Float
 >version = 0.0
+
+>rectanglePoint :: Rectangle -> Point
+>rectanglePoint (point,_) = point
+
+|This is the smallest Size a Rectangle can have.
+
+>smallRectangle :: Size
+>smallRectangle = (1,1)

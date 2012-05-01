@@ -251,9 +251,9 @@ If we are in FreeMovement mode we make a text entry and enter EditCell mode.
 If we are on an End, Exit, or Return cell, we should move this cell and make a new one to edit.
 
 >   (iShouldEnterEditMode,withCell) <- (case dc of
->     DisplayCell.DisplayCellCode (Cell.Exit point _) -> do
+>     DisplayCell.DisplayCellCode (Cell.Exit common) -> do
 >               relocateSuccess <- updateReturning (gridObject editorObjects)
->                      (\grid -> gridPointsRelocation grid [(point,point + (0,1))])
+>                      (\grid -> gridPointsRelocation grid [(Cell.commonPoint common,(Cell.commonPoint common) + (0,1))])
 
 >               if relocateSuccess
 >               then

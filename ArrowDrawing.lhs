@@ -56,15 +56,15 @@ Path Arrows
 The arrows going down to the branches of a switch.
 
 >arrowsOf ((r, (DisplayCell.DisplayCellCode cell@Cell.Which{})):cells) unfinished_arrows = 
-> arrowsOf' r (Cell.point cell) unfinished_arrows (map Cell.patternPoint (Cell.patterns cell)) cells
+> arrowsOf' r (Cell.cellPoint cell) unfinished_arrows (map Cell.patternPoint (Cell.patterns cell)) cells
 
 >arrowsOf ((r,(DisplayCell.DisplayCellPattern pattern)):cells) unfinished_arrows =
-> arrowsOf' r (Cell.patternPoint pattern) unfinished_arrows [Cell.point (Cell.action pattern)] cells
+> arrowsOf' r (Cell.patternPoint pattern) unfinished_arrows [Cell.cellPoint (Cell.action pattern)] cells
 
 The arrows comming from any other type of cell.
     
 >arrowsOf ((r, (DisplayCell.DisplayCellCode cell)):cells) unfinished_arrows =
->  arrowsOf' r (Cell.point cell) unfinished_arrows ((map Cell.point (Cell.cellNext cell))++path_points) cells
+>  arrowsOf' r (Cell.cellPoint cell) unfinished_arrows ((map Cell.cellPoint (Cell.cellsNext cell))++path_points) cells
 >   where path_points = 
 >          if
 >           case cell of

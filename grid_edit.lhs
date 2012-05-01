@@ -222,9 +222,9 @@ And we make a new one...
 >         AddAction{}  -> "Add action mode"
 >         AddPattern{} -> "Add pattern mode"
 >         EditPath{}   -> "Path edit mode"
->         MoveCell{}   -> "Move cell mode | F3/Esc Exit Mode | Enter Place Cell"
+>         MoveCell{}   -> "Move cell mode | F6/Esc Exit Mode | Enter Place Cell"
 >         EditCell{}   -> "Cell edit mode | Esc Exit Mode"
->         FreeMovement -> "Navigation mode | F3 MoveCell"
+>         FreeMovement -> "Navigation mode | F6 MoveCell"
 >         ShowError message _ -> message)]
 
 >     return ()
@@ -331,7 +331,7 @@ End of hack.
 >                     case mode of
 >                       EditCell{} -> (mode,False)
 >                       otherwise  -> (FreeMovement,True))
->             ([],"F3") ->
+>             ([],"F6") ->
 >              liftIO $ do
 >               updateWith (focusedCellObject editorObjects) (editModeObject editorObjects)
 

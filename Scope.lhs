@@ -54,11 +54,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 scopeAt reads down a tree of cells, building it's scope in the same way that scope is built in the actionCode function of PrecompileGrid.lhs  .  This is, if we are at the beginning, we have TopScope.  As we go down, action by action, the values in our scope increase.  Switches's and Forks make new scopes.  
 
 >scopeAt' end cell@Cell.Start{} values =
->	if end == (Cell.point cell) then Just (initialScope cell)
+>	if end == (Cell.cellPoint cell) then Just (initialScope cell)
 >   else scopeAt'' end cell (initialScope cell)
 
 >scopeAt' end cell values =
->	if end == (Cell.point cell) then Just values
+>	if end == (Cell.cellPoint cell) then Just values
 >   else scopeAt'' end cell values
 
 >scopeAt'' :: Point -> Cell.Cell -> Scope -> Maybe Scope
@@ -87,7 +87,7 @@ NOTE:  I no longer support Join.  Lambda makes it's existence irrelivant.
 >   where
 >           nextScopes = catMaybes 
 >               (map (\cell -> scopeAt' end cell values) 
->                   (Cell.cellNext cell))
+>                   (Cell.cellsNext cell))
 
 
 >cellValues :: Cell.Cell -> [String]
@@ -112,7 +112,7 @@ This is an awfully complicated way of saying "If there is a lable attached to th
 >valueAddByName scope value =
 >    valuesAddByName scope [value]
 
->addValueFromLabel :: Scope -> Maybe (Super.Point, String) -> Scope
+>addValueFromLabel :: Scope -> Maybe Cell.Label -> Scope
 >addValueFromLabel scope (Just (_,label)) = scope{values=label:(values scope)}
 >addValueFromLabel scope Nothing = scope
 
