@@ -39,7 +39,7 @@ Me: Hey, it's free software, fnf! :D
 
   - fnf = fork it and fap
 
-FNF software often seems to the newbie or the non programer to be a hostile environment.  It is not intended this way.  The reason why the FNF model is chosen, is not out of hostility or hatered of newbies.  It's out of the desire to provide the user with a level of freedome not provided by the classical maintainer based development model.  Haskarrow land is not a dictatorship, and I am not the dictator here.  We are on equal footing.
+FNF software often seems to the newbie or the non programer to be a hostile environment.  It is not intended this way.  The reason why the FNF model is chosen, is not out of hostility or hatered of newbies.  It's out of the desire to provide the user with a level of freedom not provided by the classical maintainer based development model.  Haskarrow land is not a dictatorship, and I am not the dictator here.  We are on equal footing.
 
 I have seen to many large open source projects get bogged down in politics and beurocracy.  It's a tragedy to see that a patch won't go through due to the whim of some long term dev.  As much as FNF may be hostile to the newbie, maintainership is hostile to the programers who develop and promote FOSS.
 
@@ -47,15 +47,15 @@ FNF doesn't mean I won't help you, give you advice, show you how my code works. 
 
 Jessica:  Look, now you can get the Haskarrow IDE in hot pink and perrywinkle blue... WITH UNICORNS!  FNF!!! :D
 
-  - fnf = freedome never fades  
+  - fnf = freedom never fades  
 
 ***
 
-FNF is the most extreme version of the Bazaar model of software development coined by Eric S. Raymond.  There is no Cathedral, no bazaar, just freedome and chaos!
+FNF is the most extreme version of the Bazaar model of software development coined by Eric S. Raymond.  There is no Cathedral, no bazaar, just freedom and chaos!
 
 ***
 
-Despite the freedome of the fnf model being claimed throughout much of the open source world, I beleive that the fnf model cannot work in traditional programming environments when applied to applications of greater than trivial complexity.
+Despite the freedom of the fnf model being claimed throughout much of the open source world, I beleive that the fnf model cannot work in traditional programming environments when applied to applications of greater than trivial complexity.
 
 The Haskarrow model has some destinct advantages.  Being based on the purely functional programming language, Haskell, there will be no "side effects" caused by much of the code base.  There is always the risk, when editing a C program, that you will mutate some part of the global state which you shouldn't have mutated, and the result will be errors occuring elsewhere in the program.  For fnf to work, a person must be able to modify a small part of a code base without needing to understand the entirety of the application.
 
