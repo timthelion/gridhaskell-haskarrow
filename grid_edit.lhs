@@ -233,25 +233,8 @@ And we make a new one...
 >saveFile editorObjects (Just contents) signal = do
 > filePath <- updateIOReturning (filePathObject editorObjects) (\filePath -> do
 >  if isNothing filePath
->  then postGUISync $ do
->     fileChooserDialog <- fileChooserDialogNew (Just "Save As...Dialog") Nothing
->                                     FileChooserActionSave
->                                     [("Cancel", ResponseCancel),
->                                      ("Save", ResponseAccept)]
- 
->     fileChooserSetDoOverwriteConfirmation fileChooserDialog True
->     widgetShow fileChooserDialog
->     response <- dialogRun fileChooserDialog
->     value <- case response of
->          ResponseCancel -> return (Nothing,Nothing)
->          ResponseAccept -> do {
->                       newFilenameMaybe <- fileChooserGetFilename fileChooserDialog;
->                       return (case newFilenameMaybe of
->                                    Nothing -> (Nothing, Nothing)
->                                    Just path -> (Just path,Just path));}
->          ResponseDeleteEvent -> return (Nothing,Nothing)
->     widgetDestroy fileChooserDialog
->     return value
+>  then do filePath <- getFilePathFromDialog FileChooserActionSave
+>          return (filePath,filePath)
 >  else return (filePath,filePath))
 
 > case filePath of
@@ -259,6 +242,46 @@ And we make a new one...
 >  Just filePath -> writeFile filePath contents
 
 >saveFile _ Nothing signal = return ()
+
+>openFile :: GridEditorObjects -> IO ()
+>openFile editorObjects =  do
+> filePath <- updateIOReturning (filePathObject editorObjects) (\_ -> do
+>   filePath <- getFilePathFromDialog FileChooserActionOpen
+>   return (filePath,filePath))
+
+> case filePath of
+>  Nothing -> return ()
+>  Just filePath -> updateIO (gridObject editorObjects)
+>    (\_->do contents <- readFile filePath
+>            return $ openGrid contents)
+
+>getFilePathFromDialog :: FileChooserAction -> IO (Maybe FilePath)
+>getFilePathFromDialog fileChooserAction = postGUISync $ do
+>     fileChooserDialog <- fileChooserDialogNew (Just 
+>       (case fileChooserAction of 
+>        FileChooserActionSave -> "Save As...Dialog"
+>        FileChooserActionOpen -> "Open .. Dialog")) Nothing
+>                                     fileChooserAction
+>                                     [("Cancel", ResponseCancel),
+>                                      (case fileChooserAction of
+>                                       FileChooserActionSave -> "Save"
+>                                       FileChooserActionOpen -> "Open", ResponseAccept)]
+ 
+>     fileChooserSetDoOverwriteConfirmation fileChooserDialog (case fileChooserAction of 
+>         FileChooserActionSave -> True
+>         FileChooserActionOpen -> False)
+>     widgetShow fileChooserDialog
+>     response <- dialogRun fileChooserDialog
+>     value <- case response of
+>          ResponseCancel -> return Nothing
+>          ResponseAccept -> do {
+>                       newFilenameMaybe <- fileChooserGetFilename fileChooserDialog;
+>                       return (case newFilenameMaybe of
+>                                    Nothing -> Nothing
+>                                    Just path -> (Just path));}
+>          ResponseDeleteEvent -> return Nothing
+>     widgetDestroy fileChooserDialog
+>     return value
 
 >syncFocusedRectangleWithScrolledWindow :: GridEditorObjects -> Rectangle -> Maybe () -> IO()
 >syncFocusedRectangleWithScrolledWindow editorObjects rectangle@(Rectangle x y _ _) signal = do
@@ -322,7 +345,7 @@ End of hack.
 >     buttonBox <- hBoxNew False 0
 >     boxPackStart myTopVBox buttonBox PackNatural 0
 
->     fileMenuAction <- actionNew "FMA" "File" Nothing Nothing
+>     fileMenuAction <- actionNew "FMA" "_File" Nothing Nothing
 
 >     newAction <- actionNew "NEWA" "New"     (Just "Just a Stub") (Just stockNew)
 >     openAction <- actionNew "OPNA" "Open"    (Just "Just a Stub") (Just stockOpen)
@@ -375,6 +398,15 @@ End of hack.
 >           finallyUpdate
 >            (fileObject editorObjects) $
 >            (\grid file -> ((Just $ saveGrid(grid)),grid))};}
+
+>     openAction `on` actionActivated $ do {
+>       liftIO $ do {
+>          continue <- saveOnPrompt window editorObjects "Save file before opening a new one?";
+>          if continue
+>          then do forkIO $ openFile editorObjects
+>                  return ()
+>          else return ()
+>     }}
 
 >     saveAction `on` actionActivated $ do{
 >         liftIO $ do {updateMulti
