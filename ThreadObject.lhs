@@ -40,7 +40,7 @@ The bind/sync function, and the updateIO functions are NOT thread safe, or even 
 >data ThreadObject a signal = ThreadObject{
 >           tickerMVar     :: MVar (ActionType a signal)}
 
->data ActionType a signal = IOAction (a -> IO a) (Maybe signal) | PureAction (a -> a) (Maybe signal)| SetSyncOnGet (a -> IO a) | SetSyncOnPut (a -> (Maybe signal) -> IO ()) | GetObjectValueIO (a -> IO ()) | FreeObject
+>data ActionType a signal = IOAction (a -> IO a) (Maybe signal) | PureAction (a -> a) (Maybe signal)| SetSyncOnGet (a -> IO a) | SetSyncOnPut (a -> (Maybe signal) -> IO ()) | GetObjectValueIO (a -> IO ()) | FreeObject (MVar Bool)
 
 >threadObject :: IO (ThreadObject a signal)
 
@@ -75,7 +75,7 @@ The bind/sync function, and the updateIO functions are NOT thread safe, or even 
 >                       loopObject to syncOnGet' syncOnPut value False Nothing
 >         SetSyncOnPut syncOnPut'  -> do
 >                       loopObject to syncOnGet syncOnPut' value False Nothing
->         FreeObject   ->    return ()
+>         FreeObject freedMVar -> putMVar freedMVar True   
 
 >update :: ThreadObject a signal -> (a -> a) -> IO ()
 >update to action = do
@@ -195,6 +195,11 @@ action v1 v2 v3 = (v3,(v2,(v1)))
 >noSyncOnPut :: a -> (Maybe signalA) -> IO ()
 >noSyncOnPut _ _ = return ()
 
+|Returns once all opperations on the object are finished and the object is freed.
+
 >freeObject :: ThreadObject a signalA -> IO ()
 >freeObject (ThreadObject tickerMVar) = do
->  putMVar tickerMVar FreeObject
+>  freedMVar <- newEmptyMVar
+>  putMVar tickerMVar (FreeObject freedMVar)
+>  takeMVar freedMVar
+>  return ()

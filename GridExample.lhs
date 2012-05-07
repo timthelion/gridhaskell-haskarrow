@@ -54,7 +54,7 @@ This is an example program written in grid haskell.  It reads characters from in
         gridComments      = [((-1,1), "This is a comment."),
                              ((3,9), "These are some loose cells...")],
 
->        gridCells = (Start (CellCommon ((-1,0),smallRectangle) []) "" "main" [] False
+>        gridCells = (Start (CellCommon ((-1,0),smallRectangle) [(((-1,1),smallRectangle), "This is a comment.")]) "" "main" [] False
 
 Preform a group of actions, leaving the stack alone.
 
@@ -125,7 +125,7 @@ And then "Jumps" back up to the start of our "loop" which began at the switch st
 >	(Jump (CellCommon ((-1,13),smallRectangle) []) (Just (SteppingStone (0,12)
 >                 (SteppingStone   (1,2)
 >				  (PathDestination (0,0))))))))]))})]))),
->   gridLooseCells=[(Action (CellCommon ((3,10),smallRectangle) []) "getChar" False True False Nothing Nothing (End (CellCommon ((3,11),smallRectangle) [])))]}
+>   gridLooseCells=[(Action (CellCommon ((3,10),smallRectangle) [(((3,9),smallRectangle), "These are some loose cells...")]) "getChar" False True False Nothing Nothing (End (CellCommon ((3,11),smallRectangle) [])))]}
 
 \end{code}
 

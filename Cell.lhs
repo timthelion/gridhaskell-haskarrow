@@ -204,6 +204,9 @@ We use this to build a list of cells for display on the screen.
 >cellsNext cell@Lambda{}   = next cell : body cell : []
 >cellsNext cell            = [next cell]
 
+>cellComments :: Cell -> [Label]
+>cellComments cell = comments (common cell)
+
 >cellPoint :: Cell -> Super.Point
 >cellPoint cell = fst (rectangle (common cell))
 
@@ -219,7 +222,7 @@ We use this to build a list of cells for display on the screen.
 
 >cellPutCode _ _ = Nothing
 
-|Put the first cell into the list of cells, at the point of the cell.  We return a tuple with our new tree of cells, plus the cells that used to come after the cell we just replaced.
+|Put the first cell into the seccond cell(tree), at the point of the first cell.  We return a tuple with our new tree of cells, plus the cells that used to come after the cell we just replaced.
 
 >cellPutCell :: Cell -> Cell -> (Cell,[Cell]) 
 
@@ -227,7 +230,12 @@ We use this to build a list of cells for display on the screen.
 > (cells',strays)
 > where (cells',strays) = if cellPoint cell == cellPoint cells
 >                          then (cell,cellsNext cells)
->                          else (cells{patterns=map (\pattern -> pattern{action=fst (cellPutCell cell (action pattern))}) (patterns cells)},[])
+>                          else (cells
+>                            {patterns=
+>                              map (\pattern ->
+>                                    pattern{ action=
+>                                     fst (cellPutCell cell (action pattern))}) 
+>                                    (patterns cells)},[])
 
 >cellPutCell cell cells@Fork{} =
 > (cells',strays)
@@ -236,11 +244,25 @@ We use this to build a list of cells for display on the screen.
 >                          else (cells{newThreads=map (\nextCells -> fst (cellPutCell cell nextCells)) (newThreads cells)},[])
 
 >cellPutCell cell cells@Jump{} =
-> (cells,[])
+> if  cellPoint cell == cellPoint cells
+> then (cells,[])
+> else error $ "Point not found:" ++ (show $ cellPoint cell)
+
 >cellPutCell cell cells@End{} =
-> (cells,[])
+> if  cellPoint cell == cellPoint cells
+> then (cells,[])
+> else error $ "Point not found:" ++ (show $ cellPoint cell)
+
 >cellPutCell cell cells@Exit{} =
-> (cells,[])
+> if  cellPoint cell == cellPoint cells
+> then (cells,[])
+> else error $ "Point not found:" ++ (show $ cellPoint cell)
+
+>cellPutCell cell cells@Return{} =
+> if  cellPoint cell == cellPoint cells
+> then (cells,[])
+> else error $ "Point not found:" ++ (show $ cellPoint cell)
+
 
 >cellPutCell cell cells =
 > (cells',strays)
@@ -332,7 +354,8 @@ We use this to build a list of cells for display on the screen.
 
 >patternPointsRelocation :: Pattern -> [(Super.Point,Super.Point)] -> Pattern
 >patternPointsRelocation pattern relocations =
->  pattern{patternLabel = labelRelocation (patternLabel pattern) relocations}
+>  pattern{patternLabel = labelRelocation (patternLabel pattern) relocations,
+>  action = cellPointsRelocation (action pattern) relocations}
 
 >mvarPointsRelocation :: Cell -> [(Super.Point,Super.Point)] -> Cell
 >mvarPointsRelocation originalCells relocations =

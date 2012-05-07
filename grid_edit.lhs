@@ -15,6 +15,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+The window drawing code was liberally stolen from various sources, such as http://muitovar.com/gtk2hs/index.html the code of which is copyright © 2007, 2008 Hans van Thiel and Alex Tarkovsky. I am currently awaiting permission to use this code.
+
 >module Main where
 
 Libraries external to application.
@@ -26,7 +28,6 @@ Libraries external to application.
 >import Control.Concurrent
 >import System.Posix.Unistd
 >import System.Exit
->import EditModes
 >import Control.Monad.IO.Class
 
 Internal libraries.
@@ -45,10 +46,6 @@ And then we need some code to actually draw these DisplayCells on the screen.
 
 >import GridDrawing
 
-Once we have a window, we need to set up some generic events for the whole window:
-
->import GridEditWindowEvents
-
 And keep track of a few mutable objects, such as our grid...
 
 >import GridEditorObjects
@@ -57,6 +54,7 @@ This type of mutable object, is defined by the module:
 
 >import ThreadObject
 >import StateRecords
+>import EditModes
 
 There are also some Super generic types that belong no where else.  Like type Point = (Int, Int)...
 
@@ -96,7 +94,7 @@ Special MVar used to quit.  Put a value here when you want to terminate.
 
 >     editorObjects <- return (GridEditorObjects gridObject' canvasObject' editModeObject' focusedCellObject' focusedRectangleObject' reFocusNeededObject' fileObject' filePathObject' gridRecords' focusedCellRecords' focusedRectangleRecords')
 
->     myWidgets <- loadWidgets gridEditWindowEvent editorObjects
+>     myWidgets <- loadWidgets exit editorObjects
 >     (window,_,canvas,scrwinContainer,_,cellInfo,modeInfo) <- return myWidgets
 
 >     widgetShowAll window
@@ -112,11 +110,13 @@ Note.  It would seem that order is important here as the sync function for gridO
 >     objectInit (focusedRectangleObject editorObjects) (Rectangle 0 0 0 0) noSyncOnGet (syncFocusedRectangleWithScrolledWindow editorObjects) True
 >     objectInit (reFocusNeededObject editorObjects) False noSyncOnGet noSyncOnPut True
 >     objectInit (fileObject editorObjects) Nothing noSyncOnGet (saveFile editorObjects) False
->     objectInit (filePathObject editorObjects) filePath noSyncOnGet noSyncOnPut False
-
->     forkIO $ handleGridEditWindowEvent exit Nothing gridEditWindowEvent
+>     objectInit (filePathObject editorObjects) (Just filePath) noSyncOnGet noSyncOnPut False
 
 >     signal <- takeMVar exit
+
+We want to make sure that we have finished saving the file(if we are saving) before we exit.
+
+>     freeObject (fileObject editorObjects)
 >     exitWith signal
 
 >syncGridwithCanvas :: GridEditorObjects -> Grid -> Maybe (RecorderSignal ()) -> IO ()
@@ -231,8 +231,33 @@ And we make a new one...
 
 >saveFile :: GridEditorObjects -> Maybe String -> Maybe () -> IO()
 >saveFile editorObjects (Just contents) signal = do
-> filePath <- getObjectValue (filePathObject editorObjects)
-> writeFile filePath contents
+> filePath <- updateIOReturning (filePathObject editorObjects) (\filePath -> do
+>  if isNothing filePath
+>  then postGUISync $ do
+>     fileChooserDialog <- fileChooserDialogNew (Just "Save As...Dialog") Nothing
+>                                     FileChooserActionSave
+>                                     [("Cancel", ResponseCancel),
+>                                      ("Save", ResponseAccept)]
+ 
+>     fileChooserSetDoOverwriteConfirmation fileChooserDialog True
+>     widgetShow fileChooserDialog
+>     response <- dialogRun fileChooserDialog
+>     value <- case response of
+>          ResponseCancel -> return (Nothing,Nothing)
+>          ResponseAccept -> do {
+>                       newFilenameMaybe <- fileChooserGetFilename fileChooserDialog;
+>                       return (case newFilenameMaybe of
+>                                    Nothing -> (Nothing, Nothing)
+>                                    Just path -> (Just path,Just path));}
+>          ResponseDeleteEvent -> return (Nothing,Nothing)
+>     widgetDestroy fileChooserDialog
+>     return value
+>  else return (filePath,filePath))
+
+> case filePath of
+>  Nothing -> return ()
+>  Just filePath -> writeFile filePath contents
+
 >saveFile _ Nothing signal = return ()
 
 >syncFocusedRectangleWithScrolledWindow :: GridEditorObjects -> Rectangle -> Maybe () -> IO()
@@ -280,8 +305,8 @@ End of hack.
 >                  windowDefaultWidth := 300, windowDefaultHeight := 250]
 >    return window
 
->loadWidgets :: MVar GridEditWindowEvent -> GridEditorObjects -> IO (Window, VBox, ScrolledWindow, VBox, HBox, Label,Label) 
->loadWidgets gridEditWindowEvent editorObjects = do
+>loadWidgets :: MVar ExitCode -> GridEditorObjects -> IO (Window, VBox, ScrolledWindow, VBox, HBox, Label,Label) 
+>loadWidgets exit editorObjects = do
 >     window <- createWindow
 
 >     myTopVBox <- vBoxNew False 0
@@ -297,25 +322,75 @@ End of hack.
 >     buttonBox <- hBoxNew False 0
 >     boxPackStart myTopVBox buttonBox PackNatural 0
 
->     save <- buttonNewFromStock stockSave
->     boxPackStart buttonBox save PackNatural 0
+>     fileMenuAction <- actionNew "FMA" "File" Nothing Nothing
+
+>     newAction <- actionNew "NEWA" "New"     (Just "Just a Stub") (Just stockNew)
+>     openAction <- actionNew "OPNA" "Open"    (Just "Just a Stub") (Just stockOpen)
+>     saveAction <- actionNew "SAVA" "Save"    (Just "Just a Stub") (Just stockSave)
+>     saveAsAction <- actionNew "SVAA" "Save As" (Just "Just a Stub") (Just stockSaveAs)
+>     exitAction <- actionNew "EXIA" "Exit"    (Just "Just a Stub") (Just stockQuit)
+
+>     actionGroup <- actionGroupNew "AGR"
+>     actionGroupAddAction actionGroup fileMenuAction
+>     mapM_ (\ act -> actionGroupAddActionWithAccel actionGroup act Nothing)
+>       [newAction,openAction,saveAction,saveAsAction]
+
+>     actionGroupAddActionWithAccel actionGroup exitAction (Just "<Control>e")
+
+>     ui <- uiManagerNew
+>     uiManagerAddUiFromString ui "<ui>\
+>\           <menubar>\
+>\            <menu action=\"FMA\">\
+>\              <menuitem action=\"NEWA\" />\
+>\              <menuitem action=\"OPNA\" />\
+>\              <menuitem action=\"SAVA\" />\
+>\              <menuitem action=\"SVAA\" />\
+>\              <separator />\
+>\              <menuitem action=\"EXIA\" />\
+>\            </menu>\
+>\           </menubar>\
+>\          </ui>"
+
+>     uiManagerInsertActionGroup ui actionGroup 0
+
+>     maybeMenubar <- uiManagerGetWidget ui "/ui/menubar"
+>     let menubar = case maybeMenubar of
+>                        (Just x) -> x
+>                        Nothing -> error "Cannot get menubar from string." 
+>     boxPackStart buttonBox menubar PackNatural 0
+
+>     newAction `on` actionActivated $ do {
+>       liftIO $ do {
+>          continue <- saveOnPrompt window editorObjects "Save file before creating new one?";
+>          if continue 
+>          then do
+>            update (filePathObject editorObjects) (\_->Nothing);
+>            update (gridObject editorObjects) (\_-> emptyGrid);
+>          else return ()}}
+
+>     saveAsAction `on` actionActivated $ do {
+>       liftIO $ do {update (filePathObject editorObjects) (\_->Nothing);
+>          updateMulti
+>            (gridObject editorObjects) $
+>           finallyUpdate
+>            (fileObject editorObjects) $
+>            (\grid file -> ((Just $ saveGrid(grid)),grid))};}
+
+>     saveAction `on` actionActivated $ do{
+>         liftIO $ do {updateMulti
+>            (gridObject editorObjects) $
+>           finallyUpdate
+>            (fileObject editorObjects) $
+>            (\grid file -> ((Just $ saveGrid(grid)),grid))};}
+
+>     exitAction `on` actionActivated $ do{
+>         liftIO $ do {quit exit window editorObjects};}
 
 >     cellInfo <- labelNew Nothing
 >     boxPackStart buttonBox cellInfo PackNatural 0
 
 >     modeInfo <- labelNew Nothing
 >     boxPackStart buttonBox modeInfo PackNatural 0
-
->     quit <- buttonNewFromStock stockQuit
->     boxPackEnd buttonBox quit PackNatural 0
-
->     save `on` buttonPressEvent $ do{
->         liftIO $ do {updateMulti
->            (gridObject editorObjects) $
->           finallyUpdate
->            (fileObject editorObjects) $
->            (\grid file -> ((Just $ saveGrid(grid)),grid))};
->         return True}
 
 >     window `on` keyPressEvent $ do
 >            modifier <- eventModifier
@@ -352,6 +427,34 @@ No need to finish the pattern with a Nothing, tryEvent will catch the exception.
                
 >             otherwise -> return False
 
->     onClicked quit (do {widgetDestroy window; putMVar gridEditWindowEvent GridEditWindowQuit})
->     onDestroy window (do {mainQuit; putMVar gridEditWindowEvent GridEditWindowQuit})
+>     window `on` objectDestroy $ do {
+>      liftIO $ do {quit exit window editorObjects};
+>     return ();}
+
 >     return (window,myTopVBox, scrwin, scrwinContainer, buttonBox, cellInfo,modeInfo)
+
+
+>quit :: MVar ExitCode -> Window -> GridEditorObjects -> IO ()
+>quit exit window editorObjects = do
+>      continueExit <- saveOnPrompt window editorObjects "Save this file before exiting?";
+>      if continueExit
+>      then putMVar exit ExitSuccess
+>      else return ()
+
+>saveOnPrompt :: Window -> GridEditorObjects -> String -> IO Bool
+>saveOnPrompt window editorObjects prompt = do
+>      saveOrNotDialog <- messageDialogNew (Just window) [] MessageQuestion ButtonsYesNo prompt;
+>      saveOrNot <- dialogRun saveOrNotDialog; 
+>      widgetDestroy saveOrNotDialog;
+>      (case saveOrNot of
+>        ResponseYes -> do {
+>                       updateMulti
+>                         (gridObject editorObjects) $
+>                        finallyUpdate
+>                         (fileObject editorObjects) $
+>            (\grid file -> ((Just $ saveGrid(grid)),grid));
+>                       return True;}
+>        ResponseNo  -> return True
+>        ResponseDeleteEvent -> return False 
+>        ResponseNone -> return False
+>        otherwise   -> error $ "Cannot process dialog responce:" ++ (show saveOrNot));

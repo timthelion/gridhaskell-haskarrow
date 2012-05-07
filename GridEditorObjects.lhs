@@ -52,7 +52,7 @@ This is a special file saving object.  Put a string in it, and it will get saved
 
 > fileObject :: ThreadObject (Maybe String) (),
 
-> filePathObject :: ThreadObject FilePath (),
+> filePathObject :: ThreadObject (Maybe FilePath) (),
 
 > gridRecords :: StateRecords Grid (RecorderSignal ()),
 

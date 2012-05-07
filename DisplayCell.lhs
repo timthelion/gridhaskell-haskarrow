@@ -140,7 +140,8 @@ The extreme point is (3,3) but there is no content to go there.
 | 'displayCellsfromCells' not only takes all the cells and turns them into DisplayCells, but also takes all their internal paths and does the same.
 
 >displayCellsfromCells :: Cell.Cell -> [DisplayCell]
->displayCellsfromCells cell = (DisplayCellCode cell) :
+>displayCellsfromCells cell = (DisplayCellCode cell) : 
+>   (map (\comment -> DisplayCellComment comment) (Cell.cellComments cell)) ++
 >   (case cell of
 
 DisplayCellArguments
