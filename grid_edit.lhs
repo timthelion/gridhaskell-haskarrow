@@ -15,7 +15,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-The window drawing code was liberally stolen from various sources, such as http://muitovar.com/gtk2hs/index.html the code of which is copyright © 2007, 2008 Hans van Thiel and Alex Tarkovsky. I am currently awaiting permission to use this code.
+The window drawing code was liberally stolen from various sources, such as http://muitovar.com/gtk2hs/index.html the code of which is copyright © 2007, 2008 Hans van Thiel and Alex Tarkovsky. The tutorial itself is further Copyright © 1997 Ian Main. © 1998-2002 Tony Gale.
 
 >module Main where
 
@@ -86,13 +86,14 @@ Special MVar used to quit.  Put a value here when you want to terminate.
 >     editModeObject'         <- threadObject
 >     fileObject'             <- threadObject
 >     filePathObject'         <- threadObject
+>     gridChangedObject'      <- threadObject
 >     reFocusNeededObject'    <- threadObject
 
 >     gridRecords'            <- stateRecords gridObject' 
 >     focusedCellRecords'     <- stateRecords focusedCellObject'
 >     focusedRectangleRecords'<- stateRecords focusedRectangleObject'
 
->     editorObjects <- return (GridEditorObjects gridObject' canvasObject' editModeObject' focusedCellObject' focusedRectangleObject' reFocusNeededObject' fileObject' filePathObject' gridRecords' focusedCellRecords' focusedRectangleRecords')
+>     editorObjects <- return (GridEditorObjects gridObject' canvasObject' editModeObject' focusedCellObject' focusedRectangleObject' reFocusNeededObject' gridChangedObject' fileObject' filePathObject' gridRecords' focusedCellRecords' focusedRectangleRecords')
 
 >     myWidgets <- loadWidgets exit editorObjects
 >     (window,_,canvas,scrwinContainer,_,cellInfo,modeInfo) <- return myWidgets
@@ -103,14 +104,17 @@ Special MVar used to quit.  Put a value here when you want to terminate.
 
 Note.  It would seem that order is important here as the sync function for gridObject references scrwinObject.   Luckly it is not.  When syncGridwithScrwin calls updateIO scrwinObject, updateIO will wait till the scrwinObject is initialized before continuing.
 
->     objectInit (editModeObject editorObjects) FreeMovement noSyncOnGet (syncEditModeWithLabel modeInfo) False
->     objectInit (gridObject editorObjects) mygrid noSyncOnGet (syncGridwithCanvas editorObjects) False
->     objectInit (canvasObject editorObjects) canvas noSyncOnGet noSyncOnPut False
->     objectInit (focusedCellObject editorObjects) Nothing noSyncOnGet (syncFocusedCellWithLabel cellInfo) True
->     objectInit (focusedRectangleObject editorObjects) (Rectangle 0 0 0 0) noSyncOnGet (syncFocusedRectangleWithScrolledWindow editorObjects) True
->     objectInit (reFocusNeededObject editorObjects) False noSyncOnGet noSyncOnPut True
->     objectInit (fileObject editorObjects) Nothing noSyncOnGet (saveFile editorObjects) False
->     objectInit (filePathObject editorObjects) (Just filePath) noSyncOnGet noSyncOnPut False
+>     objectInit (editModeObject editorObjects) (InitializedSyncedWithoutSignal FreeMovement) noSyncOnGet (syncEditModeWithLabel modeInfo)
+>     objectInit (gridObject editorObjects) (InitializedSyncedWithSignal mygrid (Just $ RecorderSignal False (Just False))) noSyncOnGet (syncGridwithCanvas editorObjects)
+>     objectInit (canvasObject editorObjects) (InitializedSyncedWithoutSignal canvas) noSyncOnGet noSyncOnPut
+>     objectInit (focusedCellObject editorObjects) (InitializedNotSynced Nothing) noSyncOnGet (syncFocusedCellWithLabel cellInfo)
+>     objectInit (focusedRectangleObject editorObjects) (InitializedNotSynced (Rectangle 0 0 0 0)) noSyncOnGet (syncFocusedRectangleWithScrolledWindow editorObjects)
+>     objectInit (reFocusNeededObject editorObjects) (InitializedNotSynced False) noSyncOnGet noSyncOnPut
+>     objectInit (fileObject editorObjects) (InitializedNotSynced Nothing) noSyncOnGet (saveFile editorObjects)
+>     objectInit (filePathObject editorObjects) (InitializedNotSynced (case filePath of
+>                       ""        -> Nothing
+>                       otherwise -> (Just filePath))) noSyncOnGet noSyncOnPut
+>     objectInit (gridChangedObject editorObjects) (InitializedSyncedWithoutSignal False) noSyncOnGet (\v _->print v)
 
 >     signal <- takeMVar exit
 
@@ -119,20 +123,27 @@ We want to make sure that we have finished saving the file(if we are saving) bef
 >     freeObject (fileObject editorObjects)
 >     exitWith signal
 
->syncGridwithCanvas :: GridEditorObjects -> Grid -> Maybe (RecorderSignal ()) -> IO ()
+>syncGridwithCanvas :: GridEditorObjects -> Grid -> Maybe (RecorderSignal Bool) -> IO ()
 >syncGridwithCanvas editorObjects mygrid signal = do
 
-This is as good a time as any to record the state of our grid.  We will keep at least 20 and up to 40 states which can be returned to with the undo(Ctrl-z) function.  
-
->   case signal of
+>   updateIO (gridChangedObject editorObjects) (\_->
+>    case signal of
 >     Just (RecorderSignal False Nothing) ->
->       return ()
+>       return True
+>     Just (RecorderSignal _ (Just False)) ->
+>       return False
 >     Nothing -> do
+
+This is as good a time as any to record the state of our grid.  We will keep at least 20 and up to 40 states which can be returned to with the undo(Ctrl-z) function.  We also record the states of various objects who we want to keep in sync with our grid in the case we might go back(undo).
+
+
 >       focusedCell <- getObjectValue (focusedCellObject editorObjects)
 >       focusedRectangle <- getObjectValue (focusedRectangleObject editorObjects)
+
 >       recordState 20 (gridRecords editorObjects) mygrid
 >       recordState 20 (focusedCellRecords editorObjects) focusedCell
 >       recordState 20 (focusedRectangleRecords editorObjects) focusedRectangle
+>       return True);
 
 We'll want to restore our scroll location(if possible) after we're done updating.
 
@@ -239,7 +250,9 @@ And we make a new one...
 
 > case filePath of
 >  Nothing -> return ()
->  Just filePath -> writeFile filePath contents
+>  Just filePath -> do
+>      print filePath
+>      writeFile filePath contents
 
 >saveFile _ Nothing signal = return ()
 
@@ -251,9 +264,10 @@ And we make a new one...
 
 > case filePath of
 >  Nothing -> return ()
->  Just filePath -> updateIO (gridObject editorObjects)
+>  Just filePath -> updateIONoBlockWithSignal (gridObject editorObjects)
 >    (\_->do contents <- readFile filePath
 >            return $ openGrid contents)
+>     (RecorderSignal False (Just False))
 
 >getFilePathFromDialog :: FileChooserAction -> IO (Maybe FilePath)
 >getFilePathFromDialog fileChooserAction = postGUISync $ do
@@ -388,16 +402,15 @@ End of hack.
 >          if continue 
 >          then do
 >            update (filePathObject editorObjects) (\_->Nothing);
->            update (gridObject editorObjects) (\_-> emptyGrid);
+>            updateWithSignal (gridObject editorObjects) (\_-> emptyGrid) (RecorderSignal False (Just False));
 >          else return ()}}
 
 >     saveAsAction `on` actionActivated $ do {
->       liftIO $ do {update (filePathObject editorObjects) (\_->Nothing);
->          updateMulti
->            (gridObject editorObjects) $
->           finallyUpdate
->            (fileObject editorObjects) $
->            (\grid file -> ((Just $ saveGrid(grid)),grid))};}
+>       liftIO $ do {updateBlock (filePathObject editorObjects) (\_->Nothing);
+>           updateMultiWithSignal (gridObject editorObjects)  (RecorderSignal False (Just False)) $
+>            finallyUpdate
+>             (fileObject editorObjects)
+>              (\grid file -> ((Just $ saveGrid(grid)),grid))};}
 
 >     openAction `on` actionActivated $ do {
 >       liftIO $ do {
@@ -409,11 +422,11 @@ End of hack.
 >     }}
 
 >     saveAction `on` actionActivated $ do{
->         liftIO $ do {updateMulti
->            (gridObject editorObjects) $
->           finallyUpdate
->            (fileObject editorObjects) $
->            (\grid file -> ((Just $ saveGrid(grid)),grid))};}
+>       liftIO $ do {
+>           updateMultiWithSignal (gridObject editorObjects) (RecorderSignal False (Just False)) $
+>            finallyUpdate
+>             (fileObject editorObjects)
+>              (\grid file -> ((Just $ saveGrid(grid)),grid))};}
 
 >     exitAction `on` actionActivated $ do{
 >         liftIO $ do {quit exit window editorObjects};}
@@ -474,19 +487,24 @@ No need to finish the pattern with a Nothing, tryEvent will catch the exception.
 >      else return ()
 
 >saveOnPrompt :: Window -> GridEditorObjects -> String -> IO Bool
->saveOnPrompt window editorObjects prompt = do
->      saveOrNotDialog <- messageDialogNew (Just window) [] MessageQuestion ButtonsYesNo prompt;
->      saveOrNot <- dialogRun saveOrNotDialog; 
->      widgetDestroy saveOrNotDialog;
->      (case saveOrNot of
->        ResponseYes -> do {
+>saveOnPrompt window editorObjects prompt = 
+>      updateIOReturningInThisThread (gridChangedObject editorObjects) (\changed -> do {
+>       saveOrNot <- (if changed
+>       then do {
+>            saveOrNotDialog <- messageDialogNew (Just window) [] MessageQuestion ButtonsYesNo prompt;
+>            saveOrNot <- dialogRun saveOrNotDialog; 
+>            widgetDestroy saveOrNotDialog;
+>            return saveOrNot;}
+>       else return ResponseNo);
+>       (case saveOrNot of
+>         ResponseYes -> do {
 >                       updateMulti
 >                         (gridObject editorObjects) $
 >                        finallyUpdate
 >                         (fileObject editorObjects) $
 >            (\grid file -> ((Just $ saveGrid(grid)),grid));
->                       return True;}
->        ResponseNo  -> return True
->        ResponseDeleteEvent -> return False 
->        ResponseNone -> return False
->        otherwise   -> error $ "Cannot process dialog responce:" ++ (show saveOrNot));
+>                       return (False,True);}
+>         ResponseNo  -> return (False,True)
+>         ResponseDeleteEvent -> return (False,False) 
+>         ResponseNone -> return (False,False)
+>         otherwise   -> error $ "Cannot process dialog responce:" ++ (show saveOrNot));})

@@ -27,7 +27,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 >stateRecords :: ThreadObject a signal -> IO (StateRecords a signal)
 >stateRecords to = do
 > stateRecordsObject <- threadObject
-> objectInit stateRecordsObject ((Nothing,[],[]),to) noSyncOnGet noSyncOnPut False
+> objectInit stateRecordsObject (InitializedNotSynced ((Nothing,[],[]),to)) noSyncOnGet noSyncOnPut
 > return stateRecordsObject 
 
 >recordState ::  Int -> StateRecords a signal -> a -> IO ()

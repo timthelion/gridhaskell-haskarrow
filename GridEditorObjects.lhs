@@ -30,7 +30,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 Our grid:
 
->  gridObject        :: ThreadObject Grid (RecorderSignal ()),
+>  gridObject        :: ThreadObject Grid (RecorderSignal Bool),
 
 The grid is displayed in a scroll window.  There is also a canvas on which the grid is drawn.
 
@@ -48,13 +48,15 @@ Which display cell's widget is currently focused?
 
 >  reFocusNeededObject    :: ThreadObject Bool (),
 
+>  gridChangedObject      :: ThreadObject Bool (),
+
 This is a special file saving object.  Put a string in it, and it will get saved to the file who's path is filePathObject.
 
 > fileObject :: ThreadObject (Maybe String) (),
 
 > filePathObject :: ThreadObject (Maybe FilePath) (),
 
-> gridRecords :: StateRecords Grid (RecorderSignal ()),
+> gridRecords :: StateRecords Grid (RecorderSignal Bool),
 
 > focusedCellRecords :: StateRecords (Maybe DisplayCell.DisplayCell) (),
 

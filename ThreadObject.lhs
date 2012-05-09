@@ -48,11 +48,20 @@ The bind/sync function, and the updateIO functions are NOT thread safe, or even 
 >    tickerMVar    <- newEmptyMVar
 >    return (ThreadObject tickerMVar)
 
->objectInit :: ThreadObject a signal -> a -> (a -> IO a) -> (a -> (Maybe signal) -> IO ()) -> Bool -> IO ()
->objectInit to value syncOnGet syncOnPut wait = do
->    forkIO $ loopObject to syncOnGet syncOnPut value wait Nothing
+>data InitialThreadState a signal = InitializedNotSynced a | InitializedSyncedWithoutSignal a | InitializedSyncedWithSignal a (Maybe signal)
+
+>objectInit :: ThreadObject a signal -> InitialThreadState a signal -> (a -> IO a) -> (a -> (Maybe signal) -> IO ()) -> IO ()
+>objectInit to (InitializedNotSynced value) syncOnGet syncOnPut = do
+>    forkIO $ loopObject to syncOnGet syncOnPut value True Nothing
 >    return ()
 
+>objectInit to (InitializedSyncedWithSignal value signal) syncOnGet syncOnPut = do
+>    forkIO $ loopObject to syncOnGet syncOnPut value False signal
+>    return ()
+
+>objectInit to (InitializedSyncedWithoutSignal value) syncOnGet syncOnPut = do
+>    forkIO $ loopObject to syncOnGet syncOnPut value False Nothing
+>    return ()
 >loopObject :: ThreadObject a signal -> (a -> IO a) -> (a -> (Maybe signal) -> IO ()) -> a -> Bool -> (Maybe signal) -> IO ()
 >loopObject  to@(ThreadObject tickerMVar)  syncOnGet syncOnPut value wait signal = do
 >   if not wait
@@ -81,6 +90,10 @@ The bind/sync function, and the updateIO functions are NOT thread safe, or even 
 >update to action = do
 >    updateWithSignal' to action Nothing
 
+>updateBlock :: ThreadObject a signal -> (a -> a) -> IO ()
+>updateBlock to action = do
+>    updateReturning to (\value -> (action value,()))
+
 >updateWithSignal :: ThreadObject a signal -> (a -> a) -> signal -> IO ()
 >updateWithSignal to action signal = do
 >    updateWithSignal' to action (Just signal)
@@ -107,6 +120,23 @@ The bind/sync function, and the updateIO functions are NOT thread safe, or even 
 >   return value')
 >  takeMVar returnValueMVar
 
+| updateIOReturningInThisThread is a very special function for a very special case.  Normally, updateIOReturning blocks the calling thread, and then preforms the given IO actions in the ThreadObject's thread.  However, if the calling thread is the same thread as GTK is running in, we end up with a problem.  We cannot make any GTK calls from within a standard updateIOReturning.  We cannot call them directly, because we are no longer in GTK's thread, and we cannot postGUI--- because GTK's thread is blocked!  So we make this function, without any guarantees to it's preformance, just for you.
+
+I recomend you don't look at it's source code, it's butt ugly :D
+
+>updateIOReturningInThisThread :: ThreadObject a signal -> (a -> IO (a,b)) -> IO b
+>updateIOReturningInThisThread to action = do
+>  valueMVar <- newEmptyMVar
+>  valueMVar' <- newEmptyMVar
+>  updateIONoBlock to (\value -> do
+>   putMVar valueMVar value
+>   takeMVar valueMVar')
+>  value <- takeMVar valueMVar
+>  (value',returnValue) <- action value
+>  putMVar valueMVar' value'
+>  return returnValue
+
+
 f :: (a -> IO (a,b)) -> IO b
 f action = do
  (a',b) <- action 1
@@ -129,6 +159,10 @@ action v1 v2 v3 = (v3,(v2,(v1)))
 >updateMulti :: ThreadObject a signalA -> (a -> IO a) -> IO ()
 >updateMulti to action = do
 >  updateIONoBlock to action
+
+>updateMultiWithSignal :: ThreadObject a signalA -> signalA -> (a -> IO a) -> IO ()
+>updateMultiWithSignal to signal action = do
+>  updateIONoBlockWithSignal to action signal
 
 >alsoUpdate :: ThreadObject a signal -> (t -> a -> IO (a, b)) -> t -> IO b
 >alsoUpdate to action = 
@@ -171,8 +205,16 @@ action v1 v2 v3 = (v3,(v2,(v1)))
 >    return ()
 
 >updateIONoBlock :: ThreadObject a singalA -> (a -> IO a) -> IO ()
->updateIONoBlock (ThreadObject tickerMVar) action = do
->    putMVar tickerMVar (IOAction action Nothing) 
+>updateIONoBlock to action = do
+>    updateIONoBlockWithSignal' to action Nothing
+
+>updateIONoBlockWithSignal :: ThreadObject a signalA -> (a -> IO a) -> signalA -> IO ()
+>updateIONoBlockWithSignal to action signal = do
+>    updateIONoBlockWithSignal' to action (Just signal)
+
+>updateIONoBlockWithSignal' :: ThreadObject a signalA -> (a -> IO a) -> Maybe signalA -> IO ()
+>updateIONoBlockWithSignal' (ThreadObject tickerMVar) action signal = do
+>    putMVar tickerMVar (IOAction action signal) 
 
 
 >getObjectValue :: ThreadObject a signalA -> IO a
