@@ -53,6 +53,11 @@ Put the cell at the point specified into the grid.
 >  else Just grid{gridCells=fst (Cell.cellPutCell cell gridCells')}
 >  where gridCells' = gridCells grid
 
+>gridPutCellOverwrite :: Cell.Cell -> Point -> Grid -> Grid
+>gridPutCellOverwrite cell point grid =
+>  grid{gridCells=fst (Cell.cellPutCell cell gridCells')}
+>   where gridCells' = gridCells grid
+
 >gridPointsRelocation :: Grid -> [(Super.Point,Super.Point)] -> (Grid,Bool)
 >gridPointsRelocation grid relocations =
 > if not $ pointsFilledGrid grid $ map snd relocations

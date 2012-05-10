@@ -30,7 +30,5 @@ gridSetDisplayCellText (DisplayCellComment (point,_)) text grid =
 >gridSetDisplayCellText (DisplayCellCode cell) text grid =
 > let cell'Maybe = (cellPutCode cell text) in
 > case cell'Maybe of
->   Just cell' -> case gridPutCell cell' (cellPoint cell') grid of
->                   Just grid' -> grid'
->                   Nothing    -> grid
+>   Just cell' -> gridPutCellOverwrite cell' (cellPoint cell') grid
 >   Nothing    -> grid

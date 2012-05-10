@@ -245,7 +245,6 @@ Not pure
 
 >editModeAction editorObjects dc vbox ShowError{} = return FreeMovement
 
-
 If we are in FreeMovement mode we make a text entry and enter EditCell mode.
 
 >editModeAction editorObjects dc vbox FreeMovement = do

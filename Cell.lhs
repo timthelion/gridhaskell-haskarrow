@@ -224,51 +224,50 @@ We use this to build a list of cells for display on the screen.
 
 |Put the first cell into the seccond cell(tree), at the point of the first cell.  We return a tuple with our new tree of cells, plus the cells that used to come after the cell we just replaced.
 
->cellPutCell :: Cell -> Cell -> (Cell,[Cell]) 
-
->cellPutCell cell cells@Which{} =
+>cellPutCell :: Cell -> Cell -> (Cell,[Cell])  
+>cellPutCell whatToPut whereToPut@Which{} =
 > (cells',strays)
-> where (cells',strays) = if cellPoint cell == cellPoint cells
->                          then (cell,cellsNext cells)
->                          else (cells
+> where (cells',strays) = if cellPoint whatToPut == cellPoint whereToPut
+>                          then (whatToPut,cellsNext whereToPut)
+>                          else (whereToPut
 >                            {patterns=
 >                              map (\pattern ->
 >                                    pattern{ action=
->                                     fst (cellPutCell cell (action pattern))}) 
->                                    (patterns cells)},[])
+>                                     fst (cellPutCell whatToPut (action pattern))}) 
+>                                    (patterns whereToPut)},[])
 
->cellPutCell cell cells@Fork{} =
+>cellPutCell whatToPut whereToPut@Fork{} =
 > (cells',strays)
-> where (cells',strays) = if  cellPoint cell == cellPoint cells
->                          then (cell,cellsNext cells)
->                          else (cells{newThreads=map (\nextCells -> fst (cellPutCell cell nextCells)) (newThreads cells)},[])
+> where (cells',strays) = if  cellPoint whatToPut == cellPoint whereToPut
+>                          then (whatToPut,cellsNext whereToPut)
+>                          else (whereToPut{newThreads=map (\nextCells -> fst (cellPutCell whatToPut nextCells)) (newThreads whereToPut)},[])
 
->cellPutCell cell cells@Jump{} =
-> if  cellPoint cell == cellPoint cells
-> then (cells,[])
-> else error $ "Point not found:" ++ (show $ cellPoint cell)
+>cellPutCell whatToPut whereToPut@Jump{} =
+> if  cellPoint whatToPut == cellPoint whereToPut
+> then (whatToPut,[])
+> else (whereToPut,[])
 
->cellPutCell cell cells@End{} =
-> if  cellPoint cell == cellPoint cells
-> then (cells,[])
-> else error $ "Point not found:" ++ (show $ cellPoint cell)
+>cellPutCell whatToPut whereToPut@End{} =
+> if  cellPoint whatToPut == cellPoint whereToPut
+> then (whatToPut,[])
+> else (whereToPut,[])
 
->cellPutCell cell cells@Exit{} =
-> if  cellPoint cell == cellPoint cells
-> then (cells,[])
-> else error $ "Point not found:" ++ (show $ cellPoint cell)
+>cellPutCell whatToPut whereToPut@Exit{} =
+> if  cellPoint whatToPut == cellPoint whereToPut
+> then (whatToPut,[])
+> else (whereToPut,[])
 
->cellPutCell cell cells@Return{} =
-> if  cellPoint cell == cellPoint cells
-> then (cells,[])
-> else error $ "Point not found:" ++ (show $ cellPoint cell)
+>cellPutCell whatToPut whereToPut@Return{} =
+> if  cellPoint whatToPut == cellPoint whereToPut
+> then (whatToPut,[])
+> else (whereToPut,[])
 
 
->cellPutCell cell cells =
+>cellPutCell whatToPut whereToPut =
 > (cells',strays)
-> where (cells',strays) = if  cellPoint cell == cellPoint cells
->                          then (cell,cellsNext cells)
->                          else (cells{next=fst(cellPutCell cell (next cells))},[])
+> where (cells',strays) = if  cellPoint whatToPut == cellPoint whereToPut
+>                          then (whatToPut,cellsNext whereToPut)
+>                          else (whereToPut{next=fst(cellPutCell whatToPut (next whereToPut))},[])
 
 | Returns a new cell with the list of point1s reloacted to their corresponding point2s in the (point1,point2) tuples.
 

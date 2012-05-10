@@ -27,7 +27,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 >code :: Grid -> String
 >code grid =
->    "This is a computer generated file.  Do not edit.  For the purposes of the GPL, this file counts as object code and NOT source code!  Releasing this file does not suffice to say you have released your source.  Editing this file is NOT the prefered method of editing grid haskell.\n" ++
+>    "{-This is a computer generated file.  Do not edit.  For the purposes of the GPL, this file counts as object code and NOT source code!  Releasing this file does not suffice to say you have released your source.  Editing this file is NOT the prefered method of editing grid haskell.\n-}" ++
 >                        (message           grid )  ++ "\n" ++
 >    (licenceCode        (gridLicence       grid )) ++ "\n" ++
 >    (importsCode        (gridImports       grid )) ++
