@@ -24,10 +24,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 >gridSetDisplayCellText :: DisplayCell -> String -> Grid -> Grid
 
-TODO TODO TODO
-gridSetDisplayCellText (DisplayCellBlank rectangle) text grid =
- gridPutComment rectangle text grid
-
 gridSetDisplayCellText (DisplayCellComment (point,_)) text grid =
  gridPutComment point text grid
 

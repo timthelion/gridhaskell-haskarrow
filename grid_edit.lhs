@@ -114,7 +114,7 @@ Note.  It would seem that order is important here as the sync function for gridO
 >     objectInit (filePathObject editorObjects) (InitializedNotSynced (case filePath of
 >                       ""        -> Nothing
 >                       otherwise -> (Just filePath))) noSyncOnGet noSyncOnPut
->     objectInit (gridChangedObject editorObjects) (InitializedSyncedWithoutSignal False) noSyncOnGet (\v _->print v)
+>     objectInit (gridChangedObject editorObjects) (InitializedSyncedWithoutSignal False) noSyncOnGet noSyncOnPut
 
 >     signal <- takeMVar exit
 
@@ -251,7 +251,6 @@ And we make a new one...
 > case filePath of
 >  Nothing -> return ()
 >  Just filePath -> do
->      print filePath
 >      writeFile filePath contents
 
 >saveFile _ Nothing signal = return ()

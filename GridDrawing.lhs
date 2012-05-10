@@ -243,6 +243,9 @@ Not pure
 
 >editModeAction :: GridEditorObjects -> DisplayCell.DisplayCell -> Box -> EditMode -> IO EditMode
 
+>editModeAction editorObjects dc vbox ShowError{} = return FreeMovement
+
+
 If we are in FreeMovement mode we make a text entry and enter EditCell mode.
 
 >editModeAction editorObjects dc vbox FreeMovement = do
@@ -250,18 +253,23 @@ If we are in FreeMovement mode we make a text entry and enter EditCell mode.
 
 If we are on an End, Exit, or Return cell, we should move this cell and make a new one to edit.
 
->   (iShouldEnterEditMode,withCell) <- (case dc of
->     DisplayCell.DisplayCellCode (Cell.Exit common) -> do
->               relocateSuccess <- updateReturning (gridObject editorObjects)
->                      (\grid -> gridPointsRelocation grid [(Cell.commonPoint common,(Cell.commonPoint common) + (0,1))])
+>   let addCell common = do{
+>      relocateSuccess <- updateReturning
+>       (gridObject editorObjects)
+>         (\grid -> gridPointsRelocation grid [(Cell.commonPoint common,(Cell.commonPoint common) + (0,1))]);
 
->               if relocateSuccess
+>               (if relocateSuccess
 >               then
 
 TODO insert a new cell.
 
 >                   return (True,dc)--TODO replace dc with our new cell...
->               else return (False,dc)
+>               else return (False,dc))} in do
+>   (iShouldEnterEditMode,withCell) <- (case dc of
+>     DisplayCell.DisplayCellCode (Cell.Exit common) -> addCell common
+>     DisplayCell.DisplayCellCode (Cell.End common) -> addCell common
+>     DisplayCell.DisplayCellCode (Cell.Return common) -> addCell common
+>     DisplayCell.DisplayCellBlank {} -> return (False, dc)
 >     otherwise  -> return (True,dc));
 
 >   if iShouldEnterEditMode
