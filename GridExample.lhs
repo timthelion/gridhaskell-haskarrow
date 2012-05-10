@@ -88,7 +88,7 @@ If the character typed was 'n' output the 'n' which we carried down the path fro
 
 and exit.  Note, there IS an important difference between Exit and End.  End does NOTHING.  Exit kills everything in an indiscriminate, imediate, and genocidal fashion.
 
->   (Action (CellCommon ((2,8),smallRectangle) []) "exitSuccess" True True False Nothing Nothing 
+>   (Action (CellCommon ((2,8),smallRectangle) []) "ExitSuccess" True True False Nothing Nothing 
 >   (Exit (CellCommon ((2,9),smallRectangle) [])))))}),
 
 Otherwise,

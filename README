@@ -3,11 +3,22 @@ git clone git://github.com/timthelion/gridhaskell-haskarrow.git
 cd gridhaskell-haskarrow/
 
 To compile grid_edit:
-ghc grid_edit.lhs -threaded
+$ghc grid_edit.lhs -threaded
 
-To run:
-./grid_edit examplegrid.grid-haskell
+To compile gridPrecompiler:
+$ghc gridPrecompiler.lhs -XDeriveDataTypeable
 
+To generate an example grid:
+$./gridPrecompiler -e
+
+To run grid_edit with example grid:
+$./grid_edit examplegrid.grid-haskell
+
+To precompile your grid:
+$./gridPrecompiler -i examplegrid.grid-haskell -o examplegrid.hs
+
+To compile your grid:
+$ghc examplegrid.hs
 
 This is FNF software.  What does that mean?  I am not the maintainer.
 
