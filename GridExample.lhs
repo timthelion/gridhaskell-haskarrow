@@ -51,9 +51,6 @@ This is an example program written in grid haskell.  It reads characters from in
 >\-}",
 >        gridImports       = ["Control.Concurrent","System.Exit"],
 
-        gridComments      = [((-1,1), "This is a comment."),
-                             ((3,9), "These are some loose cells...")],
-
 >        gridCells = (Start (CellCommon ((-1,0),smallRectangle) [(((-1,1),smallRectangle), "This is a comment.")]) "" "main" [] False
 
 Preform a group of actions, leaving the stack alone.

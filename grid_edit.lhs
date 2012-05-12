@@ -64,6 +64,10 @@ For reading and writing grid haskell files.
 
 >import GridHaskellFile
 
+For compiling to Haskell code.
+
+>import GridPrecompileToFile
+
 >main :: IO ()
 >main = do
 >     (mygrid, filePath) <- loadGrid
@@ -364,12 +368,13 @@ End of hack.
 >     openAction <- actionNew "OPNA" "Open"    (Just "Just a Stub") (Just stockOpen)
 >     saveAction <- actionNew "SAVA" "Save"    (Just "Just a Stub") (Just stockSave)
 >     saveAsAction <- actionNew "SVAA" "Save As" (Just "Just a Stub") (Just stockSaveAs)
+>     compileAction <- actionNew "COMA" "Compile" (Just "Compile to haskell.") Nothing
 >     exitAction <- actionNew "EXIA" "Exit"    (Just "Just a Stub") (Just stockQuit)
 
 >     actionGroup <- actionGroupNew "AGR"
 >     actionGroupAddAction actionGroup fileMenuAction
 >     mapM_ (\ act -> actionGroupAddActionWithAccel actionGroup act Nothing)
->       [newAction,openAction,saveAction,saveAsAction]
+>       [newAction,openAction,saveAction,saveAsAction, compileAction]
 
 >     actionGroupAddActionWithAccel actionGroup exitAction (Just "<Control>e")
 
@@ -381,6 +386,7 @@ End of hack.
 >\              <menuitem action=\"OPNA\" />\
 >\              <menuitem action=\"SAVA\" />\
 >\              <menuitem action=\"SVAA\" />\
+>\              <menuitem action=\"COMA\" />\
 >\              <separator />\
 >\              <menuitem action=\"EXIA\" />\
 >\            </menu>\
@@ -426,6 +432,13 @@ End of hack.
 >            finallyUpdate
 >             (fileObject editorObjects)
 >              (\grid file -> ((Just $ saveGrid(grid)),grid))};}
+
+>     compileAction `on` actionActivated $ do{
+>         liftIO $ do {
+>           gridHaskellFilePath <- getObjectValue (filePathObject editorObjects);
+>           case gridHaskellFilePath of
+>             Just filePath -> preCompileToFile filePath (guessHaskellFileName filePath)
+>             Nothing -> return ()};}
 
 >     exitAction `on` actionActivated $ do{
 >         liftIO $ do {quit exit window editorObjects};}

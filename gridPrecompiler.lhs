@@ -16,25 +16,23 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 This code generates more code which then compiles to a usefull executable.
-The contents of this file are released under the GPLv3 licence by Timothy Hobbs,
 
 >import System.Environment
 >import System.Console.CmdArgs.Implicit
 
->import Grid
->import GridPreCompile
+>import GridPrecompileToFile
+
 >import GridExample
 >import Super
->import GridHaskellFile
 
->data GridPrecompiler = GridPrecompiler {
+>data GridPrecompilerOptions = GridPrecompilerOptions {
 >   inputFile         :: FilePath,
 >   outputFile        :: FilePath,
 >   createExampleGrid :: Bool,
 >   version           :: Bool   
 >   } deriving (Data, Typeable)
 
->gridPrecompiler = GridPrecompiler{
+>gridPrecompiler = GridPrecompilerOptions{
 >   inputFile  =
 >    def &= typFile &= name "i" &= help "The grid file to be pre-compiled.",
 
@@ -56,7 +54,7 @@ The contents of this file are released under the GPLv3 licence by Timothy Hobbs,
 If two files are provided we precompile the one into the other.
 
 >          if not ((null (inputFile args)) || (null (outputFile args)))
->          then preCompile (inputFile args) (outputFile args)
+>          then preCompileToFile (inputFile args) (outputFile args)
 >          else(
 
 If one file is given but not the other print an error...
@@ -70,18 +68,5 @@ If one file is given but not the other print an error...
 >          if createExampleGrid args then
 >            writeFile "examplegrid.grid-haskell" (saveGrid grid)
 >          else return()
-
->preCompile :: String -> String -> IO ()
->preCompile input output = do
->            gridString <- readFile input
-
-<            print "Reading the grid."
-
->            mygrid     <- return (openGrid gridString::Grid)
-
-<            print "Precompiling to haskell."
-
->            writeFile output (code mygrid)
-
 
 >versionString = "Version: " ++ (show Super.version)
