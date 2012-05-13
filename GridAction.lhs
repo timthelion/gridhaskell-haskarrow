@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 >import Grid
 >import DisplayCell
 >import Cell
+>import CellMethods
 
 
 >gridSetDisplayCellText :: DisplayCell -> String -> Grid -> Grid

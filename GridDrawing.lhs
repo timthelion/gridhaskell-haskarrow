@@ -29,6 +29,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 >import qualified Super
 >import qualified DisplayCell
 >import qualified Cell
+>import qualified CellMethods
 >import qualified Path
 >import ThreadObject
 >import ArrowDrawing
@@ -252,36 +253,34 @@ If we are in FreeMovement mode we make a text entry and enter EditCell mode.
 
 If we are on an End, Exit, or Return cell, we should move this cell and make a new one to edit.
 
->   let addCell common = do{
->      relocateSuccess <- updateReturning
+>     let addCell common = do {
+>      updateReturning
 >       (gridObject editorObjects)
->         (\grid -> gridPointsRelocation grid [(Cell.commonPoint common,(Cell.commonPoint common) + (0,1))]);
+>         (\grid -> gridInsertBlankAction grid (CellMethods.commonPoint common))} in do
 
->               (if relocateSuccess
->               then
+>   mDisplayCell <- (case dc of
+>      DisplayCell.DisplayCellCode (Cell.Exit common) -> do 
+>         mCell <- (addCell common)
+>         return $ case mCell of {Nothing -> Nothing ; Just cell -> Just $ DisplayCell.DisplayCellCode cell} 
+>      DisplayCell.DisplayCellCode (Cell.End common) -> do 
+>         mCell <- (addCell common)
+>         return $ case mCell of {Nothing -> Nothing ; Just cell -> Just $ DisplayCell.DisplayCellCode cell} 
+>      DisplayCell.DisplayCellCode (Cell.Return common) -> do 
+>         mCell <- (addCell common)
+>         return $ case mCell of {Nothing -> Nothing ; Just cell -> Just $ DisplayCell.DisplayCellCode cell}
+>      DisplayCell.DisplayCellBlank {} -> return Nothing
+>      otherwise  -> return $ Just dc);
 
-TODO insert a new cell.
-
->                   return (True,dc)--TODO replace dc with our new cell...
->               else return (False,dc))} in do
->   (iShouldEnterEditMode,withCell) <- (case dc of
->     DisplayCell.DisplayCellCode (Cell.Exit common) -> addCell common
->     DisplayCell.DisplayCellCode (Cell.End common) -> addCell common
->     DisplayCell.DisplayCellCode (Cell.Return common) -> addCell common
->     DisplayCell.DisplayCellBlank {} -> return (False, dc)
->     otherwise  -> return (True,dc));
-
->   if iShouldEnterEditMode
->   then do
+>   case mDisplayCell of
+>    Nothing -> (return (ShowError "Cannot add a new Cell, there is something in the way." True))
+>    Just dc -> do
 >     containerForeach vbox (containerRemove vbox);
 
      print "filling with entry box";
 
->     cellFormFill vbox True editorObjects withCell; 
+>     cellFormFill vbox True editorObjects dc; 
 >     widgetShowAll vbox;
->     return (EditCell withCell);
->   else do
->     return (ShowError "Cannot add a new Cell, there is something in the way." True);
+>     return (EditCell dc);
 >   })
   
 

@@ -23,6 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 >import qualified Super
 >import qualified DisplayCell
 >import qualified Cell
+>import CellMethods
 >import qualified Path
 
 
@@ -56,15 +57,15 @@ Path Arrows
 The arrows going down to the branches of a switch.
 
 >arrowsOf ((r, (DisplayCell.DisplayCellCode cell@Cell.Which{})):cells) unfinished_arrows = 
-> arrowsOf' r (Cell.cellPoint cell) unfinished_arrows (map Cell.patternPoint (Cell.patterns cell)) cells
+> arrowsOf' r (cellPoint cell) unfinished_arrows (map patternPoint (Cell.patterns cell)) cells
 
 >arrowsOf ((r,(DisplayCell.DisplayCellPattern pattern)):cells) unfinished_arrows =
-> arrowsOf' r (Cell.patternPoint pattern) unfinished_arrows [Cell.cellPoint (Cell.action pattern)] cells
+> arrowsOf' r (patternPoint pattern) unfinished_arrows [cellPoint (Cell.action pattern)] cells
 
 The arrows comming from any other type of cell.
     
 >arrowsOf ((r, (DisplayCell.DisplayCellCode cell)):cells) unfinished_arrows =
->  arrowsOf' r (Cell.cellPoint cell) unfinished_arrows ((map Cell.cellPoint (Cell.cellsNext cell))++path_points) cells
+>  arrowsOf' r (cellPoint cell) unfinished_arrows ((map cellPoint (cellsNext cell))++path_points) cells
 >   where path_points = 
 >          if
 >           case cell of

@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 >import Data.Maybe
 
 >import Super
+>import CellMethods
 >import qualified Cell
 >import Path
 
@@ -54,11 +55,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 scopeAt reads down a tree of cells, building it's scope in the same way that scope is built in the actionCode function of PrecompileGrid.lhs  .  This is, if we are at the beginning, we have TopScope.  As we go down, action by action, the values in our scope increase.  Switches's and Forks make new scopes.  
 
 >scopeAt' end cell@Cell.Start{} values =
->	if end == (Cell.cellPoint cell) then Just (initialScope cell)
+>	if end == (cellPoint cell) then Just (initialScope cell)
 >   else scopeAt'' end cell (initialScope cell)
 
 >scopeAt' end cell values =
->	if end == (Cell.cellPoint cell) then Just values
+>	if end == (cellPoint cell) then Just values
 >   else scopeAt'' end cell values
 
 >scopeAt'' :: Point -> Cell.Cell -> Scope -> Maybe Scope
@@ -87,7 +88,7 @@ NOTE:  I no longer support Join.  Lambda makes it's existence irrelivant.
 >   where
 >           nextScopes = catMaybes 
 >               (map (\cell -> scopeAt' end cell values) 
->                   (Cell.cellsNext cell))
+>                   (cellsNext cell))
 
 
 >cellValues :: Cell.Cell -> [String]

@@ -16,7 +16,10 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 >module Grid where
+>import Data.NumInstances
+
 >import qualified Cell
+>import CellMethods
 >import Super
 
 | Grid is our file type.  We read it and show it to load and unload the grid haskell files.
@@ -63,19 +66,19 @@ Put the cell at the point specified into the grid.
 >gridPutCell cell point grid =
 >  if pointFilledGrid grid point
 >  then Nothing 
->  else Just grid{gridCells=fst (Cell.cellPutCell cell gridCells')}
+>  else Just grid{gridCells=fst (cellPutCell cell gridCells')}
 >  where gridCells' = gridCells grid
 
 >gridPutCellOverwrite :: Cell.Cell -> Point -> Grid -> Grid
 >gridPutCellOverwrite cell point grid =
->  grid{gridCells=fst (Cell.cellPutCell cell gridCells')}
+>  grid{gridCells=fst (cellPutCell cell gridCells')}
 >   where gridCells' = gridCells grid
 
 >gridPointsRelocation :: Grid -> [(Super.Point,Super.Point)] -> (Grid,Bool)
 >gridPointsRelocation grid relocations =
 > if not $ pointsFilledGrid grid $ map snd relocations
-> then (grid{gridCells = Cell.cellPointsRelocation (gridCells grid) relocations,
->      gridLooseCells = map (\cell -> Cell.cellPointsRelocation cell relocations) (gridLooseCells grid)},True)
+> then (grid{gridCells = cellPointsRelocation (gridCells grid) relocations,
+>      gridLooseCells = map (\cell -> cellPointsRelocation cell relocations) (gridLooseCells grid)},True)
 > else (grid,False)
 
 >pointFilledGrid :: Grid -> Point -> Bool
@@ -83,11 +86,25 @@ Put the cell at the point specified into the grid.
 
 Cells
 
->  (Cell.cellPointFilled (gridCells grid) point) ||
+>  (cellPointFilled (gridCells grid) point) ||
 
 Or loose cells
 
->  (any (\cell->Cell.cellPointFilled cell point) (gridLooseCells grid))
+>  (any (\cell->cellPointFilled cell point) (gridLooseCells grid))
 
 >pointsFilledGrid :: Grid -> [Point] -> Bool
 >pointsFilledGrid grid points = any (pointFilledGrid grid) points
+
+| Insert a blank action before the Cell specified by the Point.
+
+>gridInsertBlankAction :: Grid -> Point -> (Grid,Maybe Cell.Cell)
+>gridInsertBlankAction grid point =
+>  case gridPointsRelocation grid [(point,point + (0,1))] of
+>   (grid',False) -> (grid,Nothing)
+>   (grid',True)  ->  
+>    let (myHead, myTail) = cellSplitAtPoint (gridCells grid') point in
+>      let blankActionCell = Cell.Action (Cell.CellCommon (point,smallRectangle) []) "" False False False Nothing Nothing myTail in
+
+>     (grid' {gridCells =
+>            fst $ cellPutCell blankActionCell myHead},
+>            Just blankActionCell)

@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 >import qualified Grid
 >import qualified Cell
+>import CellMethods
 >import qualified Super
 >import qualified Path
 
@@ -39,23 +40,23 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
    
 >displayCellPoint :: DisplayCell -> Super.Point
->displayCellPoint (DisplayCellCode      cell)    = Cell.cellPoint    cell
->displayCellPoint (DisplayCellComment   comment) = Cell.labelPoint comment
+>displayCellPoint (DisplayCellCode      cell)    = cellPoint    cell
+>displayCellPoint (DisplayCellComment   comment) = labelPoint comment
 >displayCellPoint (DisplayCellBlank     rectangle)   = Super.rectanglePoint rectangle
 >displayCellPoint (DisplayCellPath      path)    = Path.point path
->displayCellPoint (DisplayCellArgument  argument) = Cell.labelPoint argument
->displayCellPoint (DisplayCellMVarLabel label) = Cell.labelPoint label
->displayCellPoint (DisplayCellStaticLabel label) = Cell.labelPoint label
->displayCellPoint (DisplayCellPattern   pattern) =  Cell.patternPoint pattern
+>displayCellPoint (DisplayCellArgument  argument) = labelPoint argument
+>displayCellPoint (DisplayCellMVarLabel label) = labelPoint label
+>displayCellPoint (DisplayCellStaticLabel label) = labelPoint label
+>displayCellPoint (DisplayCellPattern   pattern) =  patternPoint pattern
 
 >displayCellText :: DisplayCell -> String
->displayCellText (DisplayCellCode      cell)    = Cell.cellText    cell
->displayCellText (DisplayCellComment   comment) = Cell.labelText comment
+>displayCellText (DisplayCellCode      cell)    = cellText    cell
+>displayCellText (DisplayCellComment   comment) = labelText comment
 >displayCellText (DisplayCellBlank     _)       = ""
 >displayCellText (DisplayCellPath      _)       = ""
->displayCellText (DisplayCellArgument  label)   = Cell.labelText label
->displayCellText (DisplayCellMVarLabel label)   = Cell.labelText label
->displayCellText (DisplayCellStaticLabel label)   = Cell.labelText label
+>displayCellText (DisplayCellArgument  label)   = labelText label
+>displayCellText (DisplayCellMVarLabel label)   = labelText label
+>displayCellText (DisplayCellStaticLabel label)   = labelText label
 >displayCellText (DisplayCellPattern   pattern) = snd $ Cell.patternLabel pattern
 
 
@@ -141,7 +142,7 @@ The extreme point is (3,3) but there is no content to go there.
 
 >displayCellsfromCells :: Cell.Cell -> [DisplayCell]
 >displayCellsfromCells cell = (DisplayCellCode cell) : 
->   (map (\comment -> DisplayCellComment comment) (Cell.cellComments cell)) ++
+>   (map (\comment -> DisplayCellComment comment) (cellComments cell)) ++
 >   (case cell of
 
 DisplayCellArguments
@@ -173,7 +174,7 @@ DisplayCellPaths
 
 cellNext gives us a list, because in the case of Fork or Which we will end up with more than one of them of them.  This map gives us a type [[DisplayCell]] so we need to concat it.
 
->          (concatMap displayCellsfromCells (Cell.cellsNext cell))
+>          (concatMap displayCellsfromCells (cellsNext cell))
 
 >displayCellMVarLabel :: Cell.Cell -> DisplayCell
 >displayCellMVarLabel cell =
