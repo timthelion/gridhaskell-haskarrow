@@ -74,13 +74,17 @@ We use this to build a list of cells for display on the screen.
 
 >cellPutCell :: Cell -> Cell -> (Cell,Maybe Cell)
 >cellPutCell whatToPut whereToPut@Which{} =
-> (cells',stray)
-> where (cells',stray) = 
->                        if cellPoint whatToPut == cellPoint whereToPut
->                        then (whatToPut,Just whereToPut)
->                        else (whereToPut{patterns= zipWith
->                             (\treeTail pattern -> pattern{action = fst treeTail}) treeTails (patterns whereToPut)},
->                               case (catMaybes $ map snd treeTails) of
+
+(cells',stray)
+
+> if cellPoint whatToPut == cellPoint whereToPut
+> then (whatToPut,Just whereToPut)
+> else (whereToPut{patterns= zipWith
+>                             (\treeTail pattern -> pattern{action = fst treeTail})
+>                               treeTails 
+>                               (patterns whereToPut)},
+
+>                  case (catMaybes $ map snd treeTails) of
 >                                  [] -> Nothing
 >                                  x:xs -> Just x)
  
@@ -88,14 +92,18 @@ We use this to build a list of cells for display on the screen.
 >                                               (\pattern -> cellPutCell whatToPut (action pattern)) (patterns whereToPut)
 
 >cellPutCell whatToPut whereToPut@Fork{} =
-> (cells',strays)
-> where (cells',strays) = if  cellPoint whatToPut == cellPoint whereToPut
->                          then (whatToPut,Just whereToPut)
->                          else (whereToPut{newThreads=map fst treeTail},
->                               case (catMaybes $ map snd treeTail) of
->                                  [] -> Nothing
->                                  x:xs -> Just x)
->                               where treeTail = map (cellPutCell whatToPut) (newThreads whereToPut)
+
+(cells',strays)
+
+> if  cellPoint whatToPut == cellPoint whereToPut
+> then (whatToPut,Just whereToPut)
+> else (whereToPut{newThreads=map fst treeTail},
+>  case (catMaybes $ map snd treeTail) of
+>   [] -> Nothing
+>   x:xs -> Just x)
+>    where treeTail = map
+>                      (cellPutCell whatToPut)
+>                      (newThreads whereToPut)
 
 >cellPutCell whatToPut whereToPut@Jump{} =
 > if  cellPoint whatToPut == cellPoint whereToPut
@@ -118,12 +126,14 @@ We use this to build a list of cells for display on the screen.
 > else (whereToPut,Nothing)
 
 >cellPutCell whatToPut whereToPut =
-> (cells',stray)
-> where (cells',stray) = if  cellPoint whatToPut == cellPoint whereToPut
->                          then (whatToPut,Just whereToPut)
->                          else (whereToPut{next=fst treeTail},
->                                snd treeTail)
->                             where treeTail = cellPutCell whatToPut (next whereToPut)
+
+(cells',stray)
+
+> if  cellPoint whatToPut == cellPoint whereToPut
+> then (whatToPut,Just whereToPut)
+> else (whereToPut{next=fst treeTail},
+>       snd treeTail)
+>  where treeTail = cellPutCell whatToPut (next whereToPut)
 
 |Return two new Cell trees cut at the point.
 
