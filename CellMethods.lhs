@@ -74,25 +74,35 @@ We use this to build a list of cells for display on the screen.
 
 >cellPutCell :: Cell -> Cell -> (Cell,Maybe Cell)
 
->cellPutCell whatToPut whereToPut@Which{} 
+>cellPutCell whatToPut whereToPut@Lambda{}
 > | cellPoint whatToPut == cellPoint whereToPut =
 >   (whatToPut,Just whereToPut)
-
 > | otherwise =
 >   (cellPutCell',stray)
 
 > where
->  treeTails = 
->   map (\pattern -> cellPutCell whatToPut (action pattern)) 
->       (patterns whereToPut)
+>  cellPutCell' = whereToPut{next=fst treeTail,
+>                            body=fst bodyPutCell}
+>  stray =
+>   case snd treeTail of
+>    Just tail -> Just tail
+>    Nothing -> snd bodyPutCell
 
+>  treeTail = cellPutCell whatToPut (next whereToPut)
+
+>  bodyPutCell = cellPutCell whatToPut
+>                          $ body whereToPut
+
+>cellPutCell whatToPut whereToPut@Which{} 
+> | cellPoint whatToPut == cellPoint whereToPut =
+>   (whatToPut,Just whereToPut)
+> | otherwise =
+>   (cellPutCell',stray)
+
+> where
 >  cellPutCell' =
->   whereToPut {
->     patterns= insertNewActions treeTails $ patterns whereToPut}
-
->  insertNewActions = zipWith insertAction
- 
->  insertAction treeTail pattern = pattern{action = fst treeTail}
+>   whereToPut {patterns = insertNewActions treeTails 
+>                                         $ patterns whereToPut}
 
 >  stray =
 >   case strays of
@@ -101,49 +111,67 @@ We use this to build a list of cells for display on the screen.
 
 >  strays = catMaybes $ map snd treeTails
 
->cellPutCell whatToPut whereToPut@Fork{} =
+>  treeTails = 
+>   map (\pattern -> cellPutCell whatToPut (action pattern)) 
+>       (patterns whereToPut)
 
-(cells',strays)
+>  insertNewActions = zipWith insertAction
+ 
+>  insertAction treeTail pattern =
+>   pattern{action = fst treeTail}
 
-> if  cellPoint whatToPut == cellPoint whereToPut
-> then (whatToPut,Just whereToPut)
-> else (whereToPut{newThreads=map fst treeTail},
->  case (catMaybes $ map snd treeTail) of
->   [] -> Nothing
->   x:xs -> Just x)
->    where treeTail = map
->                      (cellPutCell whatToPut)
->                      (newThreads whereToPut)
 
->cellPutCell whatToPut whereToPut@Jump{} =
-> if  cellPoint whatToPut == cellPoint whereToPut
-> then (whatToPut,Just whereToPut)
-> else (whereToPut,Nothing)
+>cellPutCell whatToPut whereToPut@Fork{} 
+> | cellPoint whatToPut == cellPoint whereToPut =
+>   (whatToPut,Just whereToPut)
+> | otherwise = 
+>   (cellPutCell',stray)
 
->cellPutCell whatToPut whereToPut@End{} =
-> if  cellPoint whatToPut == cellPoint whereToPut
-> then (whatToPut,Just whereToPut)
-> else (whereToPut,Nothing)
+>  where 
+>   cellPutCell' =
+>    whereToPut{newThreads =
+>                map fst treeTail}
 
->cellPutCell whatToPut whereToPut@Exit{} =
-> if  cellPoint whatToPut == cellPoint whereToPut
-> then (whatToPut,Just whereToPut)
-> else (whereToPut,Nothing)
+>   stray =
+>    case (catMaybes $ map snd treeTail) of
+>     [] -> Nothing
+>     x:xs -> Just x
 
->cellPutCell whatToPut whereToPut@Return{} =
-> if  cellPoint whatToPut == cellPoint whereToPut
-> then (whatToPut,Just whereToPut)
-> else (whereToPut,Nothing)
+>   treeTail = map (cellPutCell whatToPut)
+>                  (newThreads whereToPut)
 
->cellPutCell whatToPut whereToPut =
+>cellPutCell whatToPut whereToPut@Jump{} 
+> | cellPoint whatToPut == cellPoint whereToPut =
+>   (whatToPut,Just whereToPut)
+> | otherwise =
+>   (whereToPut,Nothing)
 
-(cells',stray)
+>cellPutCell whatToPut whereToPut@End{} 
+> | cellPoint whatToPut == cellPoint whereToPut =
+>   (whatToPut,Just whereToPut)
+> | otherwise =
+>   (whereToPut,Nothing)
 
-> if  cellPoint whatToPut == cellPoint whereToPut
-> then (whatToPut,Just whereToPut)
-> else (whereToPut{next=fst treeTail},
->       snd treeTail)
->  where treeTail = cellPutCell whatToPut (next whereToPut)
+>cellPutCell whatToPut whereToPut@Exit{} 
+> | cellPoint whatToPut == cellPoint whereToPut =
+>   (whatToPut,Just whereToPut)
+> | otherwise = (whereToPut,Nothing)
+
+>cellPutCell whatToPut whereToPut@Return{} 
+> | cellPoint whatToPut == cellPoint whereToPut =
+>   (whatToPut,Just whereToPut)
+> | otherwise =
+>   (whereToPut,Nothing)
+
+>cellPutCell whatToPut whereToPut 
+> | cellPoint whatToPut == cellPoint whereToPut = 
+>   (whatToPut,Just whereToPut)
+> | otherwise =
+>   (cellPutCell', stray)
+>   where
+>    cellPutCell' = whereToPut{next=fst treeTail}
+>    stray = snd treeTail 
+>    treeTail = cellPutCell whatToPut (next whereToPut)
 
 |Return two new Cell trees cut at the point.
 

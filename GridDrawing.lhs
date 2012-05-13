@@ -294,6 +294,20 @@ If we are on an End, Exit, or Return cell, we should move this cell and make a n
 >              then return (FreeMovement)
 >              else return (ShowError "Cannot move cell, there is something in the way." True)
 
+>editModeAction editorObjects dc vbox (MoveCells cellWe'reMoving) = 
+>   case cellWe'reMoving of
+>     DisplayCell.DisplayCellCode cell -> do
+>              relocationSuccessfull <- updateReturning (gridObject editorObjects)
+>                     (\grid -> gridPointsRelocation grid $ zip oldPoints newPoints)
+>              if relocationSuccessfull
+>              then return (FreeMovement)
+>              else return (ShowError "Cannot move cell, there is something in the way." True)
+>      where 
+>       oldPoints = CellMethods.cellPoints cell
+>       newPoints = map (difference +) oldPoints 
+>       difference = DisplayCell.displayCellPoint dc - (CellMethods.cellPoint cell)
+>     otherwise -> return (FreeMovement)
+
 >editModeCancleCellEdit :: GridEditorObjects -> DisplayCell.DisplayCell -> Box -> EditMode -> IO EditMode
 >editModeCancleCellEdit editorObjects dc vbox EditCell{} = do
 >   postGUIAsync (do {

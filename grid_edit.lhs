@@ -238,8 +238,9 @@ And we make a new one...
 >         AddPattern{} -> "Add pattern mode"
 >         EditPath{}   -> "Path edit mode"
 >         MoveCell{}   -> "Move cell mode | F6/Esc Exit Mode | Enter Place Cell"
+>         MoveCells{}   -> "Move cells mode | Shfit-F6/Esc Exit Mode | Enter Place Cells"
 >         EditCell{}   -> "Cell edit mode | Esc Exit Mode"
->         FreeMovement -> "Navigation mode | F6 MoveCell | F7 insert cell"
+>         FreeMovement -> "Navigation mode | F6 MoveCell | Shift-F6 MoveCells | F7 insert cell"
 >         ShowError message _ -> message)]
 
 >     return ()
@@ -474,6 +475,19 @@ No need to finish the pattern with a Nothing, tryEvent will catch the exception.
 >                        MoveCell dc  -> FreeMovement
 >                        otherwise -> MoveCell focusedCell);
 >               return True;
+
+>             ([Shift],"F6") ->
+>              liftIO $ do
+>               updateWith (focusedCellObject editorObjects) (editModeObject editorObjects)
+
+No need to finish the pattern with a Nothing, tryEvent will catch the exception...
+
+>                      (\(Just focusedCell) editMode -> 
+>                        case editMode of
+>                        MoveCells dc  -> FreeMovement
+>                        otherwise -> MoveCells focusedCell);
+>               return True;
+
 
 >             ([],"F7") ->
 >              liftIO $ do

@@ -21,5 +21,5 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 >import qualified Cell
 >import qualified Path
 
->data EditMode = AddAction Cell.Cell | AddPattern Cell.Cell | EditPath Path.Path | MoveCell DisplayCell.DisplayCell | EditCell DisplayCell.DisplayCell | FreeMovement | ShowError String Bool
+>data EditMode = AddAction Cell.Cell | AddPattern Cell.Cell | EditPath Path.Path | MoveCell DisplayCell.DisplayCell | MoveCells DisplayCell.DisplayCell | EditCell DisplayCell.DisplayCell | FreeMovement | ShowError String Bool
 > deriving (Show)
