@@ -239,7 +239,7 @@ And we make a new one...
 >         EditPath{}   -> "Path edit mode"
 >         MoveCell{}   -> "Move cell mode | F6/Esc Exit Mode | Enter Place Cell"
 >         EditCell{}   -> "Cell edit mode | Esc Exit Mode"
->         FreeMovement -> "Navigation mode | F6 MoveCell"
+>         FreeMovement -> "Navigation mode | F6 MoveCell | F7 insert cell"
 >         ShowError message _ -> message)]
 
 >     return ()
@@ -474,6 +474,18 @@ No need to finish the pattern with a Nothing, tryEvent will catch the exception.
 >                        MoveCell dc  -> FreeMovement
 >                        otherwise -> MoveCell focusedCell);
 >               return True;
+
+>             ([],"F7") ->
+>              liftIO $ do
+>               (Just dc) <- getObjectValue (focusedCellObject editorObjects) 
+>               updateIO (editModeObject editorObjects) $ \mode -> do
+>                success <- updateReturning
+>                 (gridObject editorObjects)
+>                  (\grid -> gridInsertBlankAction grid (DisplayCell.displayCellPoint dc))
+>                if isJust success
+>                then return FreeMovement
+>                else return $ ShowError "Cannot insert cell, perhaps there is something in the way." True
+>               return True
 
 >             ([Control],"z")  -> 
 >              liftIO $ do
