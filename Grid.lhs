@@ -99,12 +99,9 @@ Or loose cells
 
 >gridInsertBlankAction :: Grid -> Point -> (Grid,Maybe Cell.Cell)
 >gridInsertBlankAction grid point =
->  case gridPointsRelocation grid [(point,point + (0,1))] of
->   (grid',False) -> (grid,Nothing)
->   (grid',True)  ->  
->    let (myHead, myTail) = cellSplitAtPoint (gridCells grid') point in
->      let blankActionCell = Cell.Action (Cell.CellCommon (point,smallRectangle) []) "" False False False Nothing Nothing myTail in
+>  let (myHead, myTail) = cellSplitAtPoint (gridCells grid) point in
+>      let blankActionCell = Cell.Action (Cell.CellCommon (point,smallRectangle) []) "" False False False Nothing Nothing $ cellPointsRelocation myTail $ zip (CellMethods.cellPoints myTail) (map ((0,1)+) $ CellMethods.cellPoints myTail) in
 
->     (grid' {gridCells =
+>     (grid {gridCells =
 >            fst $ cellPutCell blankActionCell myHead},
 >            Just blankActionCell)

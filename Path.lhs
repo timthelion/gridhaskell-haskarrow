@@ -37,3 +37,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 >pathPointFilled (PathDestination point) pointToCheck =
 > point == pointToCheck
+
+>pathPoints :: Path -> [Point]
+>pathPoints (SteppingStone point next) = point : pathPoints next
+
+>pathPoints (PathDestination point) = [point]

@@ -147,7 +147,7 @@ Grid
                                                                                                  )
                                                                                    , comments = []
                                                                                    }
-                                                                      , code = "'n'"
+                                                                      , code = "\"Hello\""
                                                                       , return = True
                                                                       , push = True
                                                                       , pull = False
@@ -164,7 +164,7 @@ Grid
                                                                                                             )
                                                                                               , comments = []
                                                                                               }
-                                                                                 , code = "putChar"
+                                                                                 , code = "print"
                                                                                  , return = False
                                                                                  , push = False
                                                                                  , pull = True
