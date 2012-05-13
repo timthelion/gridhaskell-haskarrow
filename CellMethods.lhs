@@ -73,23 +73,33 @@ We use this to build a list of cells for display on the screen.
 |Put the first cell into the seccond cell(tree), at the point of the first cell.  We return a tuple with our new tree of cells, plus the cells that used to come after the cell we just replaced.
 
 >cellPutCell :: Cell -> Cell -> (Cell,Maybe Cell)
->cellPutCell whatToPut whereToPut@Which{} =
 
-(cells',stray)
+>cellPutCell whatToPut whereToPut@Which{} 
+> | cellPoint whatToPut == cellPoint whereToPut =
+>   (whatToPut,Just whereToPut)
 
-> if cellPoint whatToPut == cellPoint whereToPut
-> then (whatToPut,Just whereToPut)
-> else (whereToPut{patterns= zipWith
->                             (\treeTail pattern -> pattern{action = fst treeTail})
->                               treeTails 
->                               (patterns whereToPut)},
+> | otherwise =
+>   (cellPutCell',stray)
 
->                  case (catMaybes $ map snd treeTails) of
->                                  [] -> Nothing
->                                  x:xs -> Just x)
+> where
+>  treeTails = 
+>   map (\pattern -> cellPutCell whatToPut (action pattern)) 
+>       (patterns whereToPut)
+
+>  cellPutCell' =
+>   whereToPut {
+>     patterns= insertNewActions treeTails $ patterns whereToPut}
+
+>  insertNewActions = zipWith insertAction
  
->                           where treeTails = map
->                                               (\pattern -> cellPutCell whatToPut (action pattern)) (patterns whereToPut)
+>  insertAction treeTail pattern = pattern{action = fst treeTail}
+
+>  stray =
+>   case strays of
+>    [] -> Nothing
+>    x:xs -> Just x
+
+>  strays = catMaybes $ map snd treeTails
 
 >cellPutCell whatToPut whereToPut@Fork{} =
 
