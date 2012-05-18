@@ -120,7 +120,12 @@ And then the patterns.
 
 >stackCode :: Int -> String
 >stackCode 0 = " "
->stackCode n = (stackCode (n-1)) ++ "p"++(show n)++ " "
+>stackCode n
+> | n < 0 = error "You've pulled more than you pushed, help!"
+> | otherwise = (stackCode (n-1)) ++ (stackItemCode n)
+
+>stackItemCode :: Int -> String
+>stackItemCode n = "p"++(show n)++ " "
 
 --------------
 Code snippets
@@ -149,17 +154,21 @@ f1x1 v0x1  p1 p2  = return ((==) p1 p2 ) >>= \v1x1 ->f2x1 v0x1  v1x1
 >	then "return (" ++ code ++ 	(stackCode stack) ++ ")"
 >	else code ++ (stackCode stack)
 
->bindCode :: Scope.Scope -> Bool -> Int -> Cell.Cell -> String
->bindCode values addValue stack next =
+>bindCode :: Scope.Scope -> Bool -> Bool -> [Int] -> Cell.Cell -> String
+>bindCode values addValue push stack next =
 >		" >>= \\" ++
 >		"value_" ++
 >		"->" ++
 >		(functionCode (CellMethods.cellPoint next)) ++
 >		(valueCodesRHS values) ++
->       if addValue
+>       (if addValue
 >       then " value_ "
->       else ""
->		++ (stackCode stack)
+>       else "") ++
+>       (if push
+>       then " value_ "
+>       else "") ++
+>		(concatMap stackItemCode stack)
+
 
 >functionNext :: Cell.Cell -> Cell.Cell -> Scope.Scope -> Int -> Bool -> String
 >functionNext next top values stack pure =
@@ -207,59 +216,43 @@ actionsCode
 ----------------------------------------------------------------
 Functions in the IO monad are handled differently from others.  The last argument, "pure", will be false.
 
-We have one syntax for when push the value but don't pull the stack.
-
->actionsCode (Cell.Action common code preturn True False label path next) top values stack False = 
->   functionHeader (CellMethods.commonPoint common) values stack ++
->   (bodyCode code preturn 0) ++
->   bindCode (Scope.addValueFromLabel values label) (isJust label) stack next ++
->   "value_ " ++
->   (functionNext next top (Scope.addValueFromLabel values label) (stack + 1) False)
-
-Another syntax for when we pull the stack but don't push a value.
-
->actionsCode (Cell.Action common code preturn False True label path next) top values stack False =
->   functionHeader (CellMethods.commonPoint common) values stack  ++
->    (bodyCode code preturn stack) ++
->    bindCode (Scope.addValueFromLabel values label) (isJust label) 0 next ++
->    functionNext next top (Scope.addValueFromLabel values label) 0 False
-
-A third syntax for when we both push and pull.
-
->actionsCode (Cell.Action common code preturn True True label path next) top values stack False =
+>actionsCode (Cell.Action common code preturn push pull label path next) top values stack False =
 >	functionHeader (CellMethods.commonPoint common) values stack ++
->	(bodyCode code preturn stack) ++
->	bindCode (Scope.addValueFromLabel values label) (isJust label) 0 next ++
->   "value_ "++
->	functionNext next top (Scope.addValueFromLabel values label) 1 False
+>	(bodyCode code preturn pull) ++
+>	bindCode (Scope.addValueFromLabel values label) (isJust label) push [pull+1..stack] next ++
+>	functionNext next top (Scope.addValueFromLabel values label) (stack-pull+(if push then 1 else 0)) False
 
-And a forth syntax for when we simply preform an action without touching the stack.
-
->actionsCode (Cell.Action common code preturn False False label path next) top values stack False =
->   functionHeader (CellMethods.commonPoint common) values stack ++
->   (bodyCode code preturn 0)     ++
->   bindCode (Scope.addValueFromLabel values label) (isJust label) stack next ++
->   functionNext next top (Scope.addValueFromLabel values label) stack False
-
->actionsCode (Cell.Lambda common arguments arrow pure body next) top values stack False =
+>actionsCode (Cell.Lambda common arguments arrow now pull pure body next) top values stack False =
 >   functionHeader (CellMethods.commonPoint common) values stack ++
 >   "do lambda_ <- (" ++
->   (bodyCode lambdaCode False 0) ++
+>   (bodyCode lambdaCode False pull) ++
 >   (valueCodesRHS values) ++ ");" ++
 >   (functionCode (CellMethods.cellPoint next)) ++
 >   (valueCodesRHS values) ++
->   (stackCode stack) ++
 >   "lambda_\n" ++
->   (functionNext body top (Scope.valuesAddByName values (map snd arguments)) 0 pure) ++
->   (functionNext next top values (stack + 1) False)
+>   (stackCode (stack-pull)) ++
+>   (functionNext body top (Scope.valuesAddByName values (map snd arguments)) pull pure) ++
+>   (functionNext next top values (stack - pull + 1) False)
 >     where
 >       lambdaCode = (functionCode (CellMethods.cellPoint body))
 
->actionsCode (Cell.Which common patterns) top values 1 False =
->   duplicationCode ++
->   concatMap patternCode patterns ++
->   (concatMap (\(Cell.Pattern patternLabel next) -> functionNext next top (Scope.addPattern values ("("++(CellMethods.labelText patternLabel)++")")) 0 False) patterns) 
->        where
+>actionsCode (Cell.Which common patterns) top values stack False =
+> duplicationCode ++
+> (concat $ patternCodes) ++
+> (concat patternContinuations)
+
+> where
+
+>  patternCodes = map patternCode patterns
+
+>  patternContinuations = 
+>   map (\(Cell.Pattern patternLabel next) ->
+>     functionNext next
+>                  top
+>                  (Scope.addPattern values ("("++(CellMethods.labelText patternLabel)++")"))
+>                  (stack-1)
+>                  False)
+>              patterns
 
 patternCode works by replacing the stack argument px with the pattern string.  This means that an item on the stack is consumed and applied to pattern matching.
 
@@ -276,7 +269,7 @@ patternCode works by replacing the stack argument px with the pattern string.  T
 >		(valueCodesRHS (Scope.addPattern values ("("++(CellMethods.labelText patternLabel)++")"))) ++ "\n"
 
 >actionsCode (Cell.Destination common porigin value path next) top values stack False =
->   actionsCode (Cell.Action common value True True False (Just ((Cell.rectangle common), value)) path next) top values stack False
+>   actionsCode (Cell.Action common value True True 0 (Just ((Cell.rectangle common), value)) path next) top values stack False
 	
 >actionsCode (Cell.Jump common (Just path)) top values stack False =
 >	functionHeader (CellMethods.commonPoint common) values stack ++
@@ -284,15 +277,27 @@ patternCode works by replacing the stack argument px with the pattern string.  T
 >   (valueCodesRHS (Scope.scopeAt (Path.destination path) top)) ++
 >   (stackCode stack)
 
+
 Note, that the last argument here, the "pure" argument, MUST be false!  There is no such thing as forking outside of IO.
 
 >actionsCode (Cell.Fork common myNewThreads) top values stack False =
+
 >   functionHeader (CellMethods.commonPoint common) values stack ++
 
 >   "do " ++ (forksCode (myNewThreads) values stack) ++
 
 >   "do signal <- takeMVar exit; putMVar exit signal; exitWith signal" ++
->   concatMap (\next->functionNext next top values stack False) myNewThreads
+>   (concat threadContinuations)
+   
+> where
+>  threadContinuations = 
+>   map
+>    (\next->functionNext next 
+>                         top
+>                         values
+>                         stack
+>                         False)
+>    myNewThreads
 
 The seccond value of NewEmptyMVar is the labelPoint.  The place where the lable is displayed has NO impact on the actual functioning of a grid.  It is esentially a comment.
 
@@ -306,12 +311,14 @@ The seccond value of NewEmptyMVar is the labelPoint.  The place where the lable 
 >   (stackCode stack) ++
 >   functionNext next top (Scope.valueAddByName values (CellMethods.labelText mvarLabel)) stack False
 
->actionsCode (Cell.PutMVar common mvarLabel next) top values stack False =
->  actionsCode (Cell.Action common code False False True Nothing Nothing next) top values stack False
+>actionsCode (Cell.PutMVar common mvarLabel next) top values stack False = 
+
+>  actionsCode (Cell.Action common code False False 1 Nothing Nothing next) top values stack False
+
 >    where code = "putMVar "++(CellMethods.labelText mvarLabel)
 
 >actionsCode (Cell.TakeMVar common mvarLabel next) top values stack False =
->  actionsCode (Cell.Action common code False True False Nothing Nothing next) top values stack False
+>  actionsCode (Cell.Action common code False True 0 Nothing Nothing next) top values stack False
 >    where code = "takeMVar "++(CellMethods.labelText mvarLabel)
 
 >actionsCode (Cell.Return common) top values stack False =

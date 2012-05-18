@@ -20,6 +20,7 @@ This code generates more code which then compiles to a usefull executable.
 >import System.Environment
 >import System.Console.CmdArgs.Implicit
 
+>import GridHaskellFile
 >import GridPrecompileToFile
 
 >import GridExample

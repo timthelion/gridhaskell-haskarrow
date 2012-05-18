@@ -37,7 +37,7 @@ Patterns are owned by which statements.
 >   deriving(Show,Read)
 
 | Cells are the main data type used.  All grid haskell commands are cells.  There is a tree of cells which is our program.  These cells get precompiled to haskell code.
-             
+
 >data Cell = 
 >    Start {
 >        common    :: CellCommon,
@@ -72,9 +72,9 @@ The getChar function has type IO Char and thus does not need to be "returned." T
 
 >        push      :: Bool,
 
-| Pull the stack and pass it as arguments to the action?
+| Pull n values from the stack and pass them as arguments to the action.
 
->        pull      :: Bool, 
+>        pull      :: Int, 
 
 |  Path to any far away place where return value of action is used.  Sometimes the stack isn't very usefull though, and we really need to carry a value to another place in the code.  We want to make this as bright visual and clear as possible, so we make a path or line on the screen that shows where each value goes(is used).
 
@@ -92,6 +92,10 @@ The getChar function has type IO Char and thus does not need to be "returned." T
 >        arguments :: [Label],
 
 >        arrow     :: Super.Rectangle,
+
+>        now       :: Bool,
+
+>        pull      :: Int,
 
 >        pure      :: Bool,
 
@@ -174,4 +178,3 @@ Exit program, sending signal to all other threads to exit as well.
 As stated earlier, we use show and read to save this to a file.
 
 >    deriving (Show, Read)
-

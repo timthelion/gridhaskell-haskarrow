@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 >import Graphics.UI.Gtk
 >import Data.Tuple
 >import Data.List
+>import Data.Maybe
 >import Data.NumInstances
 >import Control.Concurrent
 >import Control.Monad.IO.Class
@@ -124,6 +125,17 @@ Now we add an event to draw the lines in our diagram.
 
 >cellForm editorObjects dc = do
 >       box <- hBoxNew False 0
+>       box `on` keyPressEvent $ do
+>        modifier <- eventModifier
+>        key <- eventKeyName
+>        case (modifier,key) of
+>           ([],"Delete") -> do 
+>               liftIO $
+>                update (gridObject editorObjects)
+>                       $ (\grid -> deleteCellGrid (DisplayCell.displayCellPoint dc) grid)
+>               return True
+>           otherwise     -> return False
+
 >       widget <- cellFormFill (toBox box) False editorObjects dc
 >       return ((toBox box), widget)
 
@@ -132,46 +144,114 @@ Now we add an event to draw the lines in our diagram.
 >cellFormFill box edit editorObjects dc@(DisplayCell.DisplayCellCode cell@Cell.Action{}) = do
 >        pure <- buttonNewWithLabel pureText
 >        set pure [buttonRelief := ReliefHalf]
->        boxPackStart box pure PackNatural 0
+>        pure `on` buttonActivated $ do
+>              liftIO $ do
+>               update (gridObject editorObjects) 
+>                      (\grid -> gridPutCell (cell{Cell.return = not $ Cell.return cell}) grid)
 
->        widget <- cellFormFill' (DisplayCell.displayCellText dc) (toBox box) edit editorObjects dc
+>        boxPackStart box pure PackNatural 0
 
 >        bind <- buttonNewWithLabel bindText
 >        set bind [buttonRelief := ReliefHalf]
 >        boxPackStart box bind PackNatural 0
+
+>        bind `on` keyPressEvent $ do
+>            modifier <- eventModifier
+>            key <- eventKeyName
+>            case (modifier,key) of
+>             ([Control],"Right") ->
+>              liftIO $ do
+>               update (gridObject editorObjects) 
+>                      (\grid -> gridPutCell (CellMethods.decrimentPull cell) grid)
+>               return True
+
+>             ([Control],"Left") ->
+>              liftIO $ do
+>               update (gridObject editorObjects) 
+>                      (\grid -> gridPutCell (CellMethods.incrimentPull cell) grid)
+>               return True
+
+>             ([Control],"Up") ->
+>              liftIO $ do
+>               update (gridObject editorObjects) 
+>                      (\grid -> gridPutCell (CellMethods.cellPutPush cell True) grid)
+>               return True
+
+>             ([Control],"Down") ->
+>              liftIO $ do
+>               update (gridObject editorObjects) 
+>                      (\grid -> gridPutCell (CellMethods.cellPutPush cell False) grid)
+>               return True
+
+>             othrewise ->
+>              return False
+
+>        widget <- cellFormFill' (DisplayCell.displayCellText dc) (toBox box) edit editorObjects dc
+
 >        return widget
 
->           where   bindText :: String 
->                   bindText =
->                    case cell of
+>           where
+>            bindText :: String 
+>            bindText =
+>             case cell of
 
-Push Pull
+>              (Cell.Action _ _ _ True n _ _ _) -> (show n) ++ "^" 
 
->                     (Cell.Action _ _ _ True True _ _ _) -> "^>>=" 
+>              (Cell.Action _ _ _ False n _ _ _) -> (show n) ++ ":" 
 
-Push Don't Pull
-
->                     (Cell.Action _ _ _ True False _ _ _) -> "^>>" 
-
-Don't Push Don't Pull
-
->                     (Cell.Action _ _ _ False False _ _ _) -> ">>" 
-
-Don't Push Pull
-
->                     (Cell.Action _ _ _ False True _ _ _) -> ">>=" 
-
->                   pureText :: String
->                   pureText =
->                    case cell of
+>            pureText :: String
+>            pureText =
+>             case cell of
 
 Pure
 
->                     (Cell.Action _ _ True _ _ _ _ _) -> "=" 
+>              (Cell.Action _ _ True _ _ _ _ _) -> "=" 
 
 Not pure
 
->                     (Cell.Action _ _ False _ _ _ _ _) -> "IO" 
+>              (Cell.Action _ _ False _ _ _ _ _) -> "IO" 
+
+>cellFormFill box edit editorObjects dc@(DisplayCell.DisplayCellCode cell@Cell.Lambda{}) = do
+> now <- buttonNewWithLabel (nowText $ Cell.now cell)
+> set now [buttonRelief := ReliefHalf]
+> now `on` buttonActivated $ do
+>  liftIO $ do
+>   update (gridObject editorObjects) 
+>          (\grid -> gridPutCell (cell {Cell.now = 
+>                                       not $ Cell.now cell}) grid)
+
+> bind <- buttonNewWithLabel bindText
+> set bind [buttonRelief := ReliefHalf]
+> boxPackStart box bind PackNatural 0
+
+> bind `on` keyPressEvent $ do
+>  modifier <- eventModifier
+>  key <- eventKeyName
+>  case (modifier,key) of
+>   ([Control],"Right") ->
+>    liftIO $ do
+>     update (gridObject editorObjects) 
+>            (\grid -> gridPutCell (CellMethods.decrimentPull cell) grid)
+>     return True
+
+>   ([Control],"Left") ->
+>    liftIO $ do
+>     update (gridObject editorObjects) 
+>            (\grid -> gridPutCell (CellMethods.incrimentPull cell) grid)
+>     return True
+
+>   otherwise -> return False
+
+> widget <- cellFormFill' (DisplayCell.displayCellText dc) (toBox box) edit editorObjects dc
+
+> boxPackStart box now PackNatural 0
+
+> return widget
+>  where
+>   nowText True  = "Now"
+>   nowText False = "Later" 
+
+>   bindText = show $ Cell.pull cell
 
 >cellFormFill box edit editorObjects dc = do
 > cellFormFill' (DisplayCell.displayCellText dc) box edit editorObjects dc
@@ -182,7 +262,7 @@ Not pure
 >        if not edit
 >        then do
 >         enter <- buttonNewWithLabel text
->         if not $ (DisplayCell.displayCellBlank dc) || (DisplayCell.displayCellPath dc) 
+>         if not $ (DisplayCell.displayCellBlank dc) || (DisplayCell.displayCellPath dc)
 >         then set enter [buttonRelief := ReliefHalf]
 >         else set enter [buttonRelief := ReliefNone]
 >         boxPackStart box enter PackGrow 0

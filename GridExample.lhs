@@ -55,19 +55,19 @@ This is an example program written in grid haskell.  It reads characters from in
 
 Preform a group of actions, leaving the stack alone.
 
->   (Lambda (CellCommon ((0,0),smallRectangle) []) [] ((1,0),smallRectangle) False
+>   (Lambda (CellCommon ((0,0),smallRectangle) []) [] ((1,0),smallRectangle) True 0 False
 
 Get a character from stdin and push it to the stack. 
 
->	(Action (CellCommon ((2,0),smallRectangle) []) "getChar" False True False Nothing Nothing 
+>	(Action (CellCommon ((2,0),smallRectangle) []) "getChar" False True 0 Nothing Nothing 
 
 Push 'n' to the stack.  We also carry this value down a path, just to sho we can...
 
->	(Action (CellCommon ((3,0),smallRectangle) []) "'n'" True True False Nothing Nothing
+>	(Action (CellCommon ((3,0),smallRectangle) []) "'n'" True True 0 Nothing Nothing
 
 Pull the two stack items, compair them, and push the result to the stack.
 
->	(Action (CellCommon ((4,0),smallRectangle) []) "(==)" True True True Nothing Nothing
+>	(Action (CellCommon ((4,0),smallRectangle) []) "(==)" True True 2 Nothing Nothing
 
 Return the value of the ==.
 
@@ -80,12 +80,12 @@ Pull that value from the stack and pattern match it against True, or False, (an 
 
 If the character typed was 'n' output the 'n' which we carried down the path from action (0,1)
 
->   action = (Action (CellCommon ((2,6),smallRectangle) []) "'n'" True True False Nothing Nothing
->	(Action (CellCommon ((2,7),smallRectangle) []) "putChar" False False True Nothing Nothing 
+>   action = (Action (CellCommon ((2,6),smallRectangle) []) "'n'" True True 0 Nothing Nothing
+>	(Action (CellCommon ((2,7),smallRectangle) []) "putChar" False False 1 Nothing Nothing 
 
 and exit.  Note, there IS an important difference between Exit and End.  End does NOTHING.  Exit kills everything in an indiscriminate, imediate, and genocidal fashion.
 
->   (Action (CellCommon ((2,8),smallRectangle) []) "ExitSuccess" True True False Nothing Nothing 
+>   (Action (CellCommon ((2,8),smallRectangle) []) "ExitSuccess" True True 0 Nothing Nothing 
 >   (Exit (CellCommon ((2,9),smallRectangle) [])))))}),
 
 Otherwise,
@@ -106,8 +106,9 @@ Fork into two threads.  Despite there being a concept of parent and child thread
 
 One thread gets a character and puts it in our MVar.
 
->	[(Action (CellCommon ((-4,9),smallRectangle) []) "getChar" False True False Nothing Nothing
->	(PutMVar (CellCommon ((-4,10),smallRectangle) []) (((-3,10),smallRectangle), "char") (End (CellCommon ((-4,11),smallRectangle) [])))),
+>	[(Action (CellCommon ((-4,9),smallRectangle) []) "getChar" False False 1 Nothing Nothing
+>	(PutMVar (CellCommon ((-4,10),smallRectangle) []) (((-3,10),smallRectangle), "char")
+>   (End (CellCommon ((-4,11),smallRectangle) [])))),
 
 The other thread gets that character out of the MVar and puts it on the stack.
 
@@ -115,14 +116,14 @@ The other thread gets that character out of the MVar and puts it on the stack.
 
 Then we put that to output.
 
->   (Action (CellCommon ((-1,12),smallRectangle) []) "putChar" False False True Nothing Nothing
+>   (Action (CellCommon ((-1,12),smallRectangle) []) "putChar" False False 1 Nothing Nothing
 
 And then "Jumps" back up to the start of our "loop" which began at the switch statement.  I know that GOTO statements are evil when it comes to textual programs.  Hopefully, I can prove to you, that in visual programming, this is very much not the case.
 
 >	(Jump (CellCommon ((-1,13),smallRectangle) []) (Just (SteppingStone (0,12)
 >                 (SteppingStone   (1,2)
 >				  (PathDestination (0,0))))))))]))})]))),
->   gridLooseCells=[(Action (CellCommon ((3,10),smallRectangle) [(((3,9),smallRectangle), "These are some loose cells...")]) "getChar" False True False Nothing Nothing (End (CellCommon ((3,11),smallRectangle) [])))]}
+>   gridLooseCells=[(Action (CellCommon ((3,10),smallRectangle) [(((3,9),smallRectangle), "These are some loose cells...")]) "getChar" False True 0 Nothing Nothing (End (CellCommon ((3,11),smallRectangle) [])))]}
 
 \end{code}
 

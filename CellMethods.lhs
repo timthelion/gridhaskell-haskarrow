@@ -21,7 +21,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 >import qualified Path
 >import Super
 
+>import Data.NumInstances
 >import Data.Maybe
+
+>emptyEnd :: Super.Point -> Cell
+>emptyEnd point = (End (CellCommon (point,smallRectangle) []))
 
 | This is the text that gets displayed on the screen.  It is not the haskell code to which these cells are precompiled.
 
@@ -69,6 +73,19 @@ We use this to build a list of cells for display on the screen.
 >cellPutCode cell@Action{} code' = Just cell{code=code'}
 
 >cellPutCode _ _ = Nothing
+
+>decrimentPull :: Cell -> Cell
+>decrimentPull cell =
+> cell{pull = (pull cell) - 1}
+
+>incrimentPull :: Cell -> Cell
+>incrimentPull cell =
+> cell{pull = (pull cell) + 1}
+
+>cellPutPush :: Cell -> Bool -> Cell
+>cellPutPush cell p =
+> cell{push = p}
+
 
 |Put the first cell into the seccond cell(tree), at the point of the first cell.  We return a tuple with our new tree of cells, plus the cells that used to come after the cell we just replaced.
 
@@ -175,11 +192,45 @@ We use this to build a list of cells for display on the screen.
 
 |Return two new Cell trees cut at the point.
 
->cellSplitAtPoint :: Cell -> Super.Point -> (Cell,Cell)
->cellSplitAtPoint cell point = case cellPutCell (End (CellCommon (point,smallRectangle) [])) cell of
->                               (head ,Just tail) -> (head, tail)
->                               otherwise         -> error $ "Point "++ (show point) ++ " not in cell."
->                               
+>cellSplitAtPoint :: Cell -> Super.Point -> Maybe (Cell,Cell)
+>cellSplitAtPoint cell point =
+> let
+>  (head, maybeTail) =
+>   cellPutCell (End (CellCommon (point,smallRectangle) [])) cell 
+> in
+> case (head, maybeTail) of
+
+>  (head ,Just tail) ->
+>   Just (head, tail)
+
+>  (head, Nothing) ->
+>   Nothing
+
+
+>deleteCellCell :: Super.Point -> Cell -> Maybe (Cell,[Cell])
+>deleteCellCell point cell =
+> case split of
+>  Nothing   -> Nothing
+>  otherwise -> Just (cell',strays)
+> where
+>  cell' = fst $ cellPutCell myTail head
+
+>  myTail = cellPointsRelocation tail relocations
+
+>  relocations = zip (cellPoints tail) 
+>              $ map (difference +)
+>                  $ cellPoints tail
+
+>  difference = point - cellPoint tail
+
+>  (tail,strays) = extractTail
+>                $ cellsNext longTail
+ 
+>  extractTail (tail:strays) = (tail,strays)
+>  extractTail [] = (emptyEnd point,[])
+
+>  Just (head,longTail) = split
+>  split = cellSplitAtPoint cell point
 
 | Returns a new cell with the list of point1s reloacted to their corresponding point2s in the (point1,point2) tuples.
 
@@ -224,11 +275,7 @@ We use this to build a list of cells for display on the screen.
 >    patterns = map (\pattern -> patternPointsRelocation pattern relocations) (patterns originalCells)}
 
 >cellPointsRelocation originalCells@Jump{} relocations  =
->  (cellPointsRelocation' originalCells relocations){
->  path = case (path originalCells) of
->            Just path -> Just $ pathPointsRelocation path relocations
->            Nothing   -> Nothing
->  }
+>  (cellPointsRelocation' originalCells relocations)
 
 >cellPointsRelocation originalCells@Fork{} relocations  =
 >  (cellPointsRelocation' originalCells relocations){

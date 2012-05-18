@@ -62,11 +62,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 Put the cell at the point specified into the grid.
 
->gridPutCell :: Cell.Cell -> Point -> Grid -> Maybe Grid
->gridPutCell cell point grid =
->  if pointFilledGrid grid point
->  then Nothing 
->  else Just grid{gridCells=fst (cellPutCell cell gridCells')}
+>gridPutCell :: Cell.Cell -> Grid -> Grid
+>gridPutCell cell grid =
+>  grid{gridCells=fst (cellPutCell cell gridCells')}
 >  where gridCells' = gridCells grid
 
 >gridPutCellOverwrite :: Cell.Cell -> Point -> Grid -> Grid
@@ -99,9 +97,44 @@ Or loose cells
 
 >gridInsertBlankAction :: Grid -> Point -> (Grid,Maybe Cell.Cell)
 >gridInsertBlankAction grid point =
->  let (myHead, myTail) = cellSplitAtPoint (gridCells grid) point in
->      let blankActionCell = Cell.Action (Cell.CellCommon (point,smallRectangle) []) "" False False False Nothing Nothing $ cellPointsRelocation myTail $ zip (CellMethods.cellPoints myTail) (map ((0,1)+) $ CellMethods.cellPoints myTail) in
+> let 
+>  Just (myHead, myTail) =
+>   cellSplitAtPoint (gridCells grid) point
 
->     (grid {gridCells =
->            fst $ cellPutCell blankActionCell myHead},
->            Just blankActionCell)
+>  blankActionCell =
+>    Cell.Action (Cell.CellCommon (point,smallRectangle) []) "" False False 0 Nothing Nothing next
+
+>  next = 
+>    cellPointsRelocation myTail $ zip (CellMethods.cellPoints myTail) (map ((0,1)+) $ CellMethods.cellPoints myTail) in
+
+>   (grid {gridCells =
+>          fst $ cellPutCell blankActionCell myHead},
+>          Just blankActionCell)
+
+>deleteCellGrid :: Point -> Grid -> Grid
+>deleteCellGrid point grid =
+> grid{
+>  gridCells = gridCells',
+>  gridLooseCells = gridLooseCells'}
+>  where
+>   cellsPostDeleteMaybe = CellMethods.deleteCellCell point (gridCells grid)
+
+>   cellsPostDelete =
+>    case cellsPostDeleteMaybe of
+>     Just cellsPostDelete -> cellsPostDelete
+>     Nothing -> ((gridCells grid),[])
+
+>   looseCellsPostDelete :: [(Cell.Cell,[Cell.Cell])]
+>   looseCellsPostDelete =
+>    map (\cell -> maybe
+>                  (cell,[])
+>                  id
+>                $ CellMethods.deleteCellCell point cell) 
+>        (gridLooseCells grid)
+ 
+>   gridCells' = fst cellsPostDelete
+
+>   gridLooseCells' =
+>    fst (unzip looseCellsPostDelete) ++
+>    (concat $ snd $ unzip looseCellsPostDelete) ++
+>    (snd cellsPostDelete)
