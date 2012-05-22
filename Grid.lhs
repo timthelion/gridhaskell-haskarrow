@@ -55,8 +55,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 >\\
 >\You should have received a copy of the GNU General Public License\
 >\along with this program.  If not, see <http://www.gnu.org/licenses/>.\
->\-}",
->       gridImports       = [],
+>\",
+>       gridImports       = ["Control.Concurrent"],
 >       gridCells         = (Cell.Start (Cell.CellCommon ((0,0),(1,1)) []) "" "main" [] False $ Cell.End (Cell.CellCommon ((0,1),(1,1)) [])),
 >       gridLooseCells    = []} 
 
