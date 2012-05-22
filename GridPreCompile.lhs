@@ -225,8 +225,7 @@ Functions in the IO monad are handled differently from others.  The last argumen
 >actionsCode (Cell.Lambda common arguments arrow now pull pure body next) top values stack False =
 >   functionHeader (CellMethods.commonPoint common) values stack ++
 >   "do lambda_ <- (" ++
->   (bodyCode lambdaCode False pull) ++
->   (valueCodesRHS values) ++ ");" ++
+>   (bodyCode lambdaCode False pull) ++ ");" ++
 >   (functionCode (CellMethods.cellPoint next)) ++
 >   (valueCodesRHS values) ++
 >   "lambda_\n" ++
@@ -234,7 +233,8 @@ Functions in the IO monad are handled differently from others.  The last argumen
 >   (functionNext body top (Scope.valuesAddByName values (map snd arguments)) pull pure) ++
 >   (functionNext next top values (stack - pull + 1) False)
 >     where
->       lambdaCode = (functionCode (CellMethods.cellPoint body))
+>       lambdaCode = (functionCode (CellMethods.cellPoint body)) ++
+>                    (valueCodesRHS values)
 
 >actionsCode (Cell.Which common patterns) top values stack False =
 > duplicationCode ++
