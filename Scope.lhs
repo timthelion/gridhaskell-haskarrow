@@ -22,7 +22,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 >import Super
 >import CellMethods
 >import qualified Cell
->import Path
 
 | Scopes are lists of the values and mvars being passed down from previous functions.  The current scope, contains not only it's values and mvars, but also all values and mvars contained by the higher scopes.
 
@@ -54,40 +53,22 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 scopeAt reads down a tree of cells, building it's scope in the same way that scope is built in the actionCode function of PrecompileGrid.lhs  .  This is, if we are at the beginning, we have TopScope.  As we go down, action by action, the values in our scope increase.  Switches's and Forks make new scopes.  
 
->scopeAt' end cell@Cell.Start{} values =
+>scopeAt' end cell@Cell.Start{} _ =
 >	if end == (cellPoint cell) then Just (initialScope cell)
 >   else scopeAt'' end cell (initialScope cell)
 
->scopeAt' end cell values =
->	if end == (cellPoint cell) then Just values
->   else scopeAt'' end cell values
+>scopeAt' end cell theseValues =
+>	if end == (cellPoint cell) then Just theseValues
+>   else scopeAt'' end cell theseValues
 
 >scopeAt'' :: Point -> Cell.Cell -> Scope -> Maybe Scope
->scopeAt'' end cell values =
+>scopeAt'' end cell theseValues =
 >	if null nextScopes
 >   then Nothing
 >   else Just (head nextScopes)
-
-|'nextScopes' will either be only one scope long, or it will contain multiple identical scopes.  This can happen in the following case:
-
-ScopeAt (0,7) (Switch (0,2)...) values...
-
-                                 (0,0) Start
-                                 (0,1) getChar
-                                 (0,2) Switch
-                                 /          \
-Patterns from switch ->   (-1,4)'y'       (1,4)'n'
-                          (-1,5) ...      (1,5) ...
-                                 \         /     
-                                 (0,7) Join
-                                 
-After the Join, we go back to the higherScope which we had before the Switch.  But both Scopes, the one that we got going down the 'y' branch, and the one we got going down the 'n' branch are valid and identical.  
-
-NOTE:  I no longer support Join.  Lambda makes it's existence irrelivant.
-
 >   where
 >           nextScopes = catMaybes 
->               (map (\cell -> scopeAt' end cell values) 
+>               (map (\nextCell -> scopeAt' end nextCell theseValues) 
 >                   (cellsNext cell))
 
 
@@ -106,8 +87,10 @@ This is an awfully complicated way of saying "If there is a lable attached to th
 | Return a new Scope including the new MVars.
 
 >valuesAddByName :: Scope -> [String] -> Scope
->valuesAddByName (Scope values patterns higherScope) valuesToAdd =
->    (Scope (values ++ valuesToAdd) patterns higherScope) 
+>valuesAddByName (Scope myValues myPatterns myHigherScope) valuesToAdd =
+>    (Scope (myValues ++ valuesToAdd) myPatterns myHigherScope)
+ 
+>valuesAddByName TopScope _ = error "Cannot add a value to the TopScope."
 
 >valueAddByName :: Scope -> String -> Scope
 >valueAddByName scope value =

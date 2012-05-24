@@ -18,7 +18,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 >module StateRecords where
 
 >import ThreadObject
->import Control.Concurrent
 
 >data RecorderSignal signal = RecorderSignal Bool (Maybe signal) 
 
@@ -33,7 +32,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 >recordState ::  Int -> StateRecords a signal -> a -> IO ()
 >recordState n stateRecordsObject value = do
 >  updateIO stateRecordsObject 
->    (\((last,stack1,stack2),to)-> do
+>    (\((lastStateMaybe,stack1,stack2),to)-> do
 
      print "length"
      print $ length stack1
@@ -41,23 +40,23 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
      print n
 
 >     if length stack1 >= n
->     then case last of
->       Just last -> do
+>     then case lastStateMaybe of
+>       Just lastState -> do
 
          print 1
 
->         return ((Just value,last:[],stack1), to)
+>         return ((Just value,lastState:[],stack1), to)
 >       Nothing   -> do
 
          print 2
 
 >         return ((Just value,[],stack1), to)
->     else case last of
->       Just last -> do
+>     else case lastStateMaybe of
+>       Just lastState -> do
 
         print 3;
 
->        return ((Just value,last:stack1,stack2), to)
+>        return ((Just value,lastState:stack1,stack2), to)
 >       Nothing   -> do 
 
         print 4;
@@ -80,7 +79,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 >  updateIOReturning stateRecordsObject
 >    (\(stacks,to)-> do
 >     case stacks of
->       (Just last,value:stack1,stack2) -> do
+>       (Just _,value:stack1,stack2) -> do
 >           myUpdate to value
 
            print "Jv"
@@ -94,7 +93,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 >           return (((Nothing,stack1,stack2),to),True)
 
->       (Just last,[],value:stack2) -> do
+>       (Just _,[],value:stack2) -> do
 >           myUpdate to value
 
            print "J[]"
@@ -108,7 +107,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 >           return (((Nothing,stack2,[]),to),True)
 
->       (Just last,[],[])  -> do
+>       (Just _,[],[])  -> do
 
           print "J[]"
 

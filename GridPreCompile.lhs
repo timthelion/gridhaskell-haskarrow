@@ -216,7 +216,7 @@ actionsCode
 ----------------------------------------------------------------
 Functions in the IO monad are handled differently from others.  The last argument, "pure", will be false.
 
->actionsCode (Cell.Action common code preturn push pull label path next) top values stack False =
+>actionsCode (Cell.Action common code preturn push pull label next) top values stack False =
 >	functionHeader (CellMethods.commonPoint common) values stack ++
 >	(bodyCode code preturn pull) ++
 >	bindCode (Scope.addValueFromLabel values label) (isJust label) push [pull+1..stack] next ++
@@ -268,8 +268,8 @@ patternCode works by replacing the stack argument px with the pattern string.  T
 >       (functionCode (CellMethods.cellPoint next)) ++
 >		(valueCodesRHS (Scope.addPattern values ("("++(CellMethods.labelText patternLabel)++")"))) ++ "\n"
 
->actionsCode (Cell.Destination common porigin value path next) top values stack False =
->   actionsCode (Cell.Action common value True True 0 (Just ((Cell.rectangle common), value)) path next) top values stack False
+>actionsCode (Cell.Citation common value next) top values stack False =
+>   actionsCode (Cell.Action common (CellMethods.labelText value) True True 0 Nothing next) top values stack False
 	
 >actionsCode (Cell.Jump common (Just path)) top values stack False =
 >	functionHeader (CellMethods.commonPoint common) values stack ++
@@ -313,12 +313,12 @@ The seccond value of NewEmptyMVar is the labelPoint.  The place where the lable 
 
 >actionsCode (Cell.PutMVar common mvarLabel next) top values stack False = 
 
->  actionsCode (Cell.Action common code False False 1 Nothing Nothing next) top values stack False
+>  actionsCode (Cell.Action common code False False 1 Nothing next) top values stack False
 
 >    where code = "putMVar "++(CellMethods.labelText mvarLabel)
 
 >actionsCode (Cell.TakeMVar common mvarLabel next) top values stack False =
->  actionsCode (Cell.Action common code False True 0 Nothing Nothing next) top values stack False
+>  actionsCode (Cell.Action common code False True 0 Nothing next) top values stack False
 >    where code = "takeMVar "++(CellMethods.labelText mvarLabel)
 
 >actionsCode (Cell.Return common) top values stack False =

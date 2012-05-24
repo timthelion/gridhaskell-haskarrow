@@ -27,18 +27,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 >    deriving (Show, Read)
 
 >destination :: Path -> Point
->destination (SteppingStone _ path)  = destination path
->destination (PathDestination point) = point 
+>destination (SteppingStone _ intermediatePath)  = destination intermediatePath
+>destination (PathDestination destinationPoint) = destinationPoint 
 
 >pathPointFilled :: Path -> Point -> Bool
->pathPointFilled (SteppingStone point next) pointToCheck =
-> (point == pointToCheck) ||
-> pathPointFilled next pointToCheck
+>pathPointFilled (SteppingStone pointHere nextPath) pointToCheck =
+> (pointHere == pointToCheck) ||
+> pathPointFilled nextPath pointToCheck
 
->pathPointFilled (PathDestination point) pointToCheck =
-> point == pointToCheck
+>pathPointFilled (PathDestination pointHere) pointToCheck =
+> pointHere == pointToCheck
 
 >pathPoints :: Path -> [Point]
->pathPoints (SteppingStone point next) = point : pathPoints next
+>pathPoints (SteppingStone pointHere nextPath) = pointHere : pathPoints nextPath
 
->pathPoints (PathDestination point) = [point]
+>pathPoints (PathDestination pointHere) = [pointHere]

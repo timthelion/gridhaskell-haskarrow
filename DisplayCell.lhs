@@ -33,7 +33,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 >                 | DisplayCellArgument Cell.Label
 >                 | DisplayCellStaticLabel Cell.Label
 >                 | DisplayCellPattern Cell.Pattern
->                 | DisplayCellMVarLabel Cell.Label
+>                 | DisplayCellMVarLabel Cell.Cell
+>                 | DisplayCellValueLabel Cell.Cell
 >                 | DisplayCellPath Path.Path
 >                 | DisplayCellBlank Super.Rectangle
 >   deriving (Show)
@@ -45,7 +46,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 >displayCellPoint (DisplayCellBlank     rectangle)   = Super.rectanglePoint rectangle
 >displayCellPoint (DisplayCellPath      path)    = Path.point path
 >displayCellPoint (DisplayCellArgument  argument) = labelPoint argument
->displayCellPoint (DisplayCellMVarLabel label) = labelPoint label
+>displayCellPoint (DisplayCellMVarLabel cell) = labelPoint $ Cell.mvarLabel cell
+>displayCellPoint (DisplayCellValueLabel cell) = labelPoint $ Cell.value cell
 >displayCellPoint (DisplayCellStaticLabel label) = labelPoint label
 >displayCellPoint (DisplayCellPattern   pattern) =  patternPoint pattern
 
@@ -55,7 +57,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 >displayCellText (DisplayCellBlank     _)       = ""
 >displayCellText (DisplayCellPath      _)       = ""
 >displayCellText (DisplayCellArgument  label)   = labelText label
->displayCellText (DisplayCellMVarLabel label)   = labelText label
+>displayCellText (DisplayCellMVarLabel cell)   = labelText $ Cell.mvarLabel cell
+>displayCellText (DisplayCellValueLabel cell)   = labelText $ Cell.value cell
 >displayCellText (DisplayCellStaticLabel label)   = labelText label
 >displayCellText (DisplayCellPattern   pattern) = snd $ Cell.patternLabel pattern
 
@@ -80,11 +83,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 >compareCells c1 c2 = if (swap (displayCellPoint c1)) > (swap (displayCellPoint c2)) then GT else LT
 
 >filledinDisplayCellList :: [DisplayCell] -> Super.Point -> Super.Point -> [DisplayCell]
->filledinDisplayCellList displayCells minimum maximum = 
->    filledinDisplayCellList' displayCells minimum minimum maximum
+>filledinDisplayCellList displayCells minPoint maxPoint = 
+>    filledinDisplayCellList' displayCells minPoint minPoint maxPoint
 
 >filledinDisplayCellList' :: [DisplayCell] -> Super.Point -> Super.Point -> Super.Point -> [DisplayCell]
->filledinDisplayCellList' (displayCell:displayCells) mypoint minimum maximum =
+>filledinDisplayCellList' (displayCell:displayCells) mypoint minPoint maxPoint =
 
 If the next cell in the list is the same as the point we are filling
 
@@ -96,7 +99,7 @@ fill that point with the next cell in the list and append the rest of the displa
 
 otherwise put a blank cell at mypoint and append the rest of the display cells.
 
->    else DisplayCellBlank (mypoint,Super.smallRectangle) :  displayCellsTail (displayCell:displayCells)
+>    else DisplayCellBlank (mypoint,Super.small) :  displayCellsTail (displayCell:displayCells)
 > where displayCellsTail leftOverDisplayCells=
 
 Fill out the rest of the DisplayCell list.  
@@ -105,9 +108,9 @@ Fill out the rest of the DisplayCell list.
 
 We have to swap the points when compairing because Y is more significant to us than X.  We want the list to be in order left to right top to bottom.
 
->         if (swap (nextPoint mypoint minimum maximum))>(swap maximum)
+>         if (swap (nextPoint mypoint minPoint maxPoint))>(swap maxPoint)
 >         then []
->         else (filledinDisplayCellList' leftOverDisplayCells  (nextPoint mypoint minimum maximum) minimum maximum)
+>         else (filledinDisplayCellList' leftOverDisplayCells  (nextPoint mypoint minPoint maxPoint) minPoint maxPoint)
 
 In the case that the grid is really empty, don't display any cells.
 
@@ -124,16 +127,16 @@ xxo
 
 The extreme point is (3,3) but there is no content to go there.
 
->filledinDisplayCellList' [] mypoint minimum maximum =
->    if mypoint == maximum
->    then [(DisplayCellBlank (mypoint,Super.smallRectangle))]
->    else (DisplayCellBlank (mypoint,Super.smallRectangle)) : 
->    (filledinDisplayCellList' []  (nextPoint mypoint minimum maximum) minimum maximum)
+>filledinDisplayCellList' [] mypoint minPoint maxPoint =
+>    if mypoint == maxPoint
+>    then [(DisplayCellBlank (mypoint,Super.small))]
+>    else (DisplayCellBlank (mypoint,Super.small)) : 
+>    (filledinDisplayCellList' []  (nextPoint mypoint minPoint maxPoint) minPoint maxPoint)
 
 | The 'nextPoint' as taken from left to right, top to bottom.
 
 >nextPoint :: Super.Point -> Super.Point -> Super.Point -> Super.Point
->nextPoint (mypoint_x,mypoint_y) (minimum_x,minimum_y) (maximum_x,maximum_y) =
+>nextPoint (mypoint_x,mypoint_y) (minimum_x,_) (maximum_x,_) =
 >    if mypoint_x == maximum_x
 >    then (minimum_x,mypoint_y+1)
 >    else (mypoint_x+1, mypoint_y)
@@ -165,10 +168,10 @@ DisplayCellPaths
 
 >       Cell.Action{}       -> (displayCellsfromPath (Cell.path cell)) ++
 >                              case Cell.label cell of
->                                Just label -> [DisplayCellMVarLabel label]
+>                                Just _ -> [DisplayCellMVarLabel cell]
 >                                Nothing             -> []
 >       Cell.Jump{}         -> (displayCellsfromPath (Cell.path cell))
->       Cell.Destination{}  -> (displayCellsfromPath (Cell.path cell))
+>       Cell.Citation{}  -> [(DisplayCellValueLabel cell)]
 >       _                   -> []
 >       ) ++
 
@@ -178,7 +181,7 @@ cellNext gives us a list, because in the case of Fork or Which we will end up wi
 
 >displayCellMVarLabel :: Cell.Cell -> DisplayCell
 >displayCellMVarLabel cell =
->   DisplayCellMVarLabel (Cell.mvarLabel cell)
+>   DisplayCellMVarLabel cell
 
 >displayCellsfromPath :: (Maybe Path.Path) -> [DisplayCell]
 >displayCellsfromPath (Just p)   = displayCellsfromPath' p
@@ -186,8 +189,8 @@ cellNext gives us a list, because in the case of Fork or Which we will end up wi
 
 
 >displayCellsfromPath' :: Path.Path -> [DisplayCell]
->displayCellsfromPath' p@Path.SteppingStone{} = 
->             DisplayCellPath p : 
->             (displayCellsfromPath' (Path.next p))
->displayCellsfromPath' p@Path.PathDestination{} =
+>displayCellsfromPath' thisPath@Path.SteppingStone{} = 
+>             DisplayCellPath thisPath : 
+>             (displayCellsfromPath' (Path.next thisPath))
+>displayCellsfromPath' Path.PathDestination{} =
 >             []

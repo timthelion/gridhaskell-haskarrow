@@ -33,10 +33,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 | 'maximumPoint' and 'minimumPoint' are just glosses for extremePoint.
 
 >maximumPoint :: [DisplayCell.DisplayCell] -> (Super.Point -> Int) -> Int
->maximumPoint [] axis = 0
+>maximumPoint [] _ = 0
 >maximumPoint displayCell axis = extremePoint displayCell axis maximum
 >minimumPoint :: [DisplayCell.DisplayCell] -> (Super.Point -> Int) -> Int
->minimumPoint [] axis = 0
+>minimumPoint [] _ = 0
 >minimumPoint displayCell axis = extremePoint displayCell axis minimum
 
 
@@ -53,4 +53,5 @@ Just more abstractions for minimumPoint and maximumPoint
 
 | The 'lengthBetween' two numbers is the true (length [a..b]).  length [a..b] however returns the wrong result in Haskell.  For [0..0] it returns 1 when we want 0.
 
+>lengthBetween :: Int -> Int -> Int
 >lengthBetween a b = if a==b then 0 else (b-a+1)

@@ -21,11 +21,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 >import qualified Path
 >import Super
 
->import Data.NumInstances
+>import Data.NumInstances()
+
 >import Data.Maybe
 
 >emptyEnd :: Super.Point -> Cell
->emptyEnd point = (End (CellCommon (point,smallRectangle) []))
+>emptyEnd point = (End (CellCommon (point,small) []))
 
 | This is the text that gets displayed on the screen.  It is not the haskell code to which these cells are precompiled.
 
@@ -34,12 +35,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 >cellText cell@Action{}       = code cell
 >cellText Lambda{}            = "λ"
 >cellText Which{}             = "Which"
->cellText cell@Destination{}  = value cell
+>cellText cell@Citation{}     = snd $ value cell
 >cellText Jump{}              = "Jump"
 >cellText Fork{}              = "Fork"
->cellText cell@NewEmptyMVar{} = "newEmptyMVar"
->cellText cell@PutMVar{}      = "putMVar"
->cellText cell@TakeMVar{}     = "takeMVar"
+>cellText NewEmptyMVar{}      = "newEmptyMVar"
+>cellText PutMVar{}           = "putMVar"
+>cellText TakeMVar{}          = "takeMVar"
 >cellText Return{}            = "Return"
 >cellText End{}               = "End"
 >cellText Exit{}              = "Exit"
@@ -47,10 +48,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 We use this to build a list of cells for display on the screen.
 
 >cellsNext :: Cell -> [Cell]
->cellsNext cell@Jump{}     = []
->cellsNext cell@Return{}   = []
->cellsNext cell@End{}      = []
->cellsNext cell@Exit{}     = []
+>cellsNext Jump{}          = []
+>cellsNext Return{}        = []
+>cellsNext End{}           = []
+>cellsNext Exit{}          = []
 >cellsNext cell@Fork{}     = newThreads cell
 >cellsNext cell@Which{}    = map action (patterns cell)
 >cellsNext cell@Lambda{}   = next cell : body cell : []
@@ -62,17 +63,25 @@ We use this to build a list of cells for display on the screen.
 >cellPoint :: Cell -> Super.Point
 >cellPoint cell = fst (rectangle (common cell))
 
->cellPutCode :: Cell -> String -> Maybe Cell
->cellPutCode _ "Fork"        = Nothing
->cellPutCode _ "Jump"        = Nothing
->cellPutCode _ "End"         = Nothing
->cellPutCode _ "Which"       = Nothing
->cellPutCode _ "Destination" = Nothing
+>cellPutCode :: Cell -> String -> (Point -> Point) -> Either Cell (Cell,[Cell])
+>cellPutCode cell "Fork"  _     =
+> Left (Fork (common cell) (cellsNext cell))
+>cellPutCode cell "Jump"  _     =
+> Right ((Jump (common cell) Nothing), cellsNext cell)
+>cellPutCode cell "End"   _     =
+> Right ((End (common cell)), cellsNext cell)
+>cellPutCode cell "Which" _  =
+> Right ((Which (common cell) []), cellsNext cell)
+>cellPutCode cell "Cite"  near  =
+> Right ((Citation (common cell) emptyLabel (head $ cellsNext cell)), tail $ cellsNext cell)
+> where
+>  emptyLabel =
+>   (((near $ (cellPoint cell)+(1,0)),Super.small),"")
 
->cellPutCode cell@Start{}  code' = Just cell{code=code'}
->cellPutCode cell@Action{} code' = Just cell{code=code'}
+>cellPutCode cell@Start{}  code' _ = Left cell{code=code'}
+>cellPutCode cell@Action{} code' _ = Left cell{code=code'}
 
->cellPutCode _ _ = Nothing
+>cellPutCode _ _ _ = error "Trying to put code into non code cell."
 
 >decrimentPull :: Cell -> Cell
 >decrimentPull cell =
@@ -95,19 +104,19 @@ We use this to build a list of cells for display on the screen.
 > | cellPoint whatToPut == cellPoint whereToPut =
 >   (whatToPut,Just whereToPut)
 > | otherwise =
->   (cellPutCell',stray)
+>   (cellPutCell',strays)
 
 > where
->  cellPutCell' = whereToPut{next=fst treeTail,
->                            body=fst bodyPutCell}
->  stray =
->   case snd treeTail of
->    Just tail -> Just tail
->    Nothing -> snd bodyPutCell
+>  cellPutCell' = whereToPut{next=fst continuation,
+>                            body=fst bodyContinuation}
+>  strays =
+>   case snd continuation of
+>    Just strays' -> Just strays'
+>    Nothing -> snd bodyContinuation
 
->  treeTail = cellPutCell whatToPut (next whereToPut)
+>  continuation = cellPutCell whatToPut (next whereToPut)
 
->  bodyPutCell = cellPutCell whatToPut
+>  bodyContinuation = cellPutCell whatToPut
 >                          $ body whereToPut
 
 >cellPutCell whatToPut whereToPut@Which{} 
@@ -124,7 +133,7 @@ We use this to build a list of cells for display on the screen.
 >  stray =
 >   case strays of
 >    [] -> Nothing
->    x:xs -> Just x
+>    x:_ -> Just x
 
 >  strays = catMaybes $ map snd treeTails
 
@@ -152,7 +161,7 @@ We use this to build a list of cells for display on the screen.
 >   stray =
 >    case (catMaybes $ map snd treeTail) of
 >     [] -> Nothing
->     x:xs -> Just x
+>     x:_ -> Just x
 
 >   treeTail = map (cellPutCell whatToPut)
 >                  (newThreads whereToPut)
@@ -195,42 +204,42 @@ We use this to build a list of cells for display on the screen.
 >cellSplitAtPoint :: Cell -> Super.Point -> Maybe (Cell,Cell)
 >cellSplitAtPoint cell point =
 > let
->  (head, maybeTail) =
->   cellPutCell (End (CellCommon (point,smallRectangle) [])) cell 
+>  (left, maybeRight) =
+>   cellPutCell (End (CellCommon (point,small) [])) cell 
 > in
-> case (head, maybeTail) of
+> case maybeRight of
 
->  (head ,Just tail) ->
->   Just (head, tail)
+>  Just right ->
+>   Just (left, right)
 
->  (head, Nothing) ->
+>  Nothing ->
 >   Nothing
 
 
 >deleteCellCell :: Super.Point -> Cell -> Maybe (Cell,[Cell])
 >deleteCellCell point cell =
-> case split of
+> case splitCell of
 >  Nothing   -> Nothing
->  otherwise -> Just (cell',strays)
+>  _         -> Just (cell',strays)
 > where
->  cell' = fst $ cellPutCell myTail head
+>  cell' = fst $ cellPutCell myTail whereToPut
 
->  myTail = cellPointsRelocation tail relocations
+>  myTail = cellPointsRelocation myTail' relocations
 
->  relocations = zip (cellPoints tail) 
+>  relocations = zip (cellPoints myTail) 
 >              $ map (difference +)
->                  $ cellPoints tail
+>                  $ cellPoints myTail
 
->  difference = point - cellPoint tail
+>  difference = point - cellPoint myTail
 
->  (tail,strays) = extractTail
+>  (myTail',strays) = extractTail
 >                $ cellsNext longTail
  
->  extractTail (tail:strays) = (tail,strays)
+>  extractTail (tailHead:strays') = (tailHead,strays')
 >  extractTail [] = (emptyEnd point,[])
 
->  Just (head,longTail) = split
->  split = cellSplitAtPoint cell point
+>  Just (whereToPut,longTail) = splitCell
+>  splitCell = cellSplitAtPoint cell point
 
 | Returns a new cell with the list of point1s reloacted to their corresponding point2s in the (point1,point2) tuples.
 
@@ -244,11 +253,8 @@ We use this to build a list of cells for display on the screen.
 >cellPointsRelocation originalCells@Action{} relocations  =
 >  (cellPointsRelocation' originalCells relocations){
 >  label = case (label originalCells) of
->            Just label -> Just $ labelRelocation label relocations
+>            Just myLabel -> Just $ labelRelocation myLabel relocations
 >            Nothing    -> Nothing,
->  path = case (path originalCells) of
->            Just path -> Just $ pathPointsRelocation path relocations
->            Nothing   -> Nothing,
 >  next = cellPointsRelocation (next originalCells) relocations
 >  }
 
@@ -261,12 +267,9 @@ We use this to build a list of cells for display on the screen.
 >  }
 
 
->cellPointsRelocation originalCells@Destination{} relocations  =
+>cellPointsRelocation originalCells@Citation{} relocations  =
 >  (cellPointsRelocation' originalCells relocations){
->  origin = relocatePoint (origin originalCells) relocations,
->  path = case (path originalCells) of
->            Just path -> Just $ pathPointsRelocation path relocations
->            Nothing   -> Nothing,
+>  value = labelRelocation (value originalCells) relocations,
 >  next = cellPointsRelocation (next originalCells) relocations
 >  }
 
@@ -298,22 +301,22 @@ We use this to build a list of cells for display on the screen.
 >   common = commonRelocation (common originalCells) relocations}
 
 >argumentsPointsRelocation :: [Label] ->  [(Super.Point,Super.Point)] -> [Label]
->argumentsPointsRelocation arguments relocations =
+>argumentsPointsRelocation argumentsToRelocate relocations =
 > map
->   (\label -> labelRelocation label relocations)
->   arguments
+>   (\thisLabel -> labelRelocation thisLabel relocations)
+>   argumentsToRelocate
 
 >pathPointsRelocation :: Path.Path -> [(Super.Point,Super.Point)] -> Path.Path
->pathPointsRelocation path@Path.SteppingStone{} relocations =
->  path{Path.point = relocatePoint (Path.point path) relocations,
->       Path.next  = pathPointsRelocation (Path.next path) relocations}
->pathPointsRelocation path@Path.PathDestination{} relocations =
->  path{Path.point = relocatePoint (Path.point path) relocations}
+>pathPointsRelocation pathToRelocate@Path.SteppingStone{} relocations =
+>  pathToRelocate{Path.point = relocatePoint (Path.point pathToRelocate) relocations,
+>       Path.next  = pathPointsRelocation (Path.next pathToRelocate) relocations}
+>pathPointsRelocation pathToRelocate@Path.PathDestination{} relocations =
+>  pathToRelocate{Path.point = relocatePoint (Path.point pathToRelocate) relocations}
 
 >patternPointsRelocation :: Pattern -> [(Super.Point,Super.Point)] -> Pattern
->patternPointsRelocation pattern relocations =
->  pattern{patternLabel = labelRelocation (patternLabel pattern) relocations,
->  action = cellPointsRelocation (action pattern) relocations}
+>patternPointsRelocation patternToRelocate relocations =
+>  patternToRelocate{patternLabel = labelRelocation (patternLabel patternToRelocate) relocations,
+>  action = cellPointsRelocation (action patternToRelocate) relocations}
 
 >mvarPointsRelocation :: Cell -> [(Super.Point,Super.Point)] -> Cell
 >mvarPointsRelocation originalCells relocations =
@@ -323,13 +326,13 @@ We use this to build a list of cells for display on the screen.
 >   }
 
 >labelRelocation :: Label -> [(Super.Point,Super.Point)] -> Label
->labelRelocation (rectangle,string) relocations = (rectangleRelocation rectangle relocations,string)
+>labelRelocation (rectangleToRelocate,string) relocations = (rectangleRelocation rectangleToRelocate relocations,string)
 
 >commonRelocation :: CellCommon -> [(Super.Point,Super.Point)] -> CellCommon
->commonRelocation common relocations = common{rectangle = rectangleRelocation (rectangle common) relocations}
+>commonRelocation commonToRelocate relocations = commonToRelocate{rectangle = rectangleRelocation (rectangle commonToRelocate) relocations}
 
 >rectangleRelocation :: Super.Rectangle ->  [(Super.Point,Super.Point)] -> Super.Rectangle
->rectangleRelocation (point,size) relocations = (relocatePoint point relocations,size)
+>rectangleRelocation (pointToRelocate,size) relocations = (relocatePoint pointToRelocate relocations,size)
 
 >relocatePoint :: Super.Point -> [(Super.Point,Super.Point)] -> Super.Point
 >relocatePoint point relocations =
@@ -341,80 +344,43 @@ We use this to build a list of cells for display on the screen.
 >                 else Nothing)
 >        relocations
 >     of
->  (p:ps) -> p
+>  (p:_) -> p
 >  []     -> point
 
 >cellPoints :: Cell -> [Super.Point]
 >cellPoints cell = cellPoint cell : (case cell of
 >  Start{} ->
->   map (\label -> labelPoint label) (arguments cell)
+>   map (\thisLabel -> labelPoint thisLabel) (arguments cell)
 >  Action{} -> (case (label cell) of
->               Just label -> [labelPoint label]
+>               Just myLabel -> [labelPoint myLabel]
 >               Nothing         -> []) ++
 >              (case (path cell) of
->               Just path -> Path.pathPoints path
+>               Just myPath -> Path.pathPoints myPath
 >               Nothing   -> [])
->  Lambda{} -> (map (\label -> labelPoint label) (arguments cell)) ++
+>  Lambda{} -> (map (\thisLabel -> labelPoint thisLabel) (arguments cell)) ++
 >              [rectanglePoint $ arrow cell]
->  Destination{} -> case (path cell) of
->                    Just path -> Path.pathPoints path
->                    Nothing -> []
+>  Citation{} -> [labelPoint $ value cell]
 >  Which{} -> map (\pattern -> labelPoint (patternLabel pattern)) (patterns cell)
 >  Jump{}  -> case (path cell) of
->              Just path -> Path.pathPoints path
+>              Just myPath -> Path.pathPoints myPath
 >              Nothing -> []
 >  NewEmptyMVar{} -> [labelPoint (mvarLabel cell)]
 >  TakeMVar{}     -> [labelPoint  (mvarLabel cell)]
 >  PutMVar{}      -> [labelPoint (mvarLabel cell)]
->  otherwise      -> []) ++
+>  _              -> []) ++
 >  concatMap (cellPoints) (cellsNext cell)
 
 >cellPointFilled :: Cell -> Super.Point -> Bool
->cellPointFilled cell pointToCheck =
-> if pointToCheck == cellPoint cell
-> then True
-> else (case cell of
->  Start{} ->
->   any (\label -> labelPointFilled label pointToCheck) (arguments cell)
->  Action{} -> (case (label cell) of
->               Just label -> labelPointFilled label pointToCheck
->               Nothing         -> False) ||
->              (case (path cell) of
->               Just path -> Path.pathPointFilled path pointToCheck
->               Nothing   -> False)
->  Lambda{} -> (any (\label -> labelPointFilled label pointToCheck) (arguments cell)) ||
->              (rectanglePointFilled (arrow cell) pointToCheck)
->  Destination{} -> case (path cell) of
->                    Just path -> Path.pathPointFilled path pointToCheck
->                    Nothing -> False
->  Which{} -> or $ map (\pattern -> labelPointFilled (patternLabel pattern) pointToCheck) (patterns cell)
->  Jump{}  -> case (path cell) of
->              Just path -> Path.pathPointFilled path pointToCheck
->              Nothing -> False
->  NewEmptyMVar{} -> labelPointFilled (mvarLabel cell) pointToCheck
->  TakeMVar{}     -> labelPointFilled (mvarLabel cell) pointToCheck
->  PutMVar{}      -> labelPointFilled (mvarLabel cell) pointToCheck
->  otherwise      -> False) ||
->  (or $ map (\cell->cellPointFilled cell pointToCheck) (cellsNext cell))
-
-| Is the point covered by the label?
-
->labelPointFilled :: Label -> Super.Point -> Bool
->labelPointFilled (rectangle,_) point = rectanglePointFilled rectangle point
-
-| Is the point inside the Rectangle?
-
->rectanglePointFilled :: Super.Rectangle -> Super.Point -> Bool
->rectanglePointFilled ((rx,ry),(rw,rh)) (px,py) = (px >= rx && px < rx + rw) && (py >= ry && py < ry + rh)
+>cellPointFilled cell pointToCheck = elem pointToCheck (cellPoints cell)
 
 >labelPoint :: Label -> Super.Point
->labelPoint (rectangle,_) = Super.rectanglePoint rectangle
+>labelPoint (myRectangle,_) = Super.rectanglePoint myRectangle
 
 >labelText :: Label -> String
 >labelText (_,string) = string
 
 >commonPoint :: CellCommon -> Super.Point
->commonPoint common = Super.rectanglePoint $ rectangle common
+>commonPoint thisCommon = Super.rectanglePoint $ rectangle thisCommon
 
 >patternPoint :: Pattern -> Super.Point
 >patternPoint pattern = labelPoint (patternLabel pattern)

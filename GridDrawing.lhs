@@ -195,9 +195,9 @@ Now we add an event to draw the lines in our diagram.
 >            bindText =
 >             case cell of
 
->              (Cell.Action _ _ _ True n _ _ _) -> (show n) ++ "^" 
+>              (Cell.Action _ _ _ True n _ _) -> (show n) ++ "^" 
 
->              (Cell.Action _ _ _ False n _ _ _) -> (show n) ++ ":" 
+>              (Cell.Action _ _ _ False n _ _) -> (show n) ++ ":" 
 
 >            pureText :: String
 >            pureText =
@@ -205,11 +205,11 @@ Now we add an event to draw the lines in our diagram.
 
 Pure
 
->              (Cell.Action _ _ True _ _ _ _ _) -> "=" 
+>              (Cell.Action _ _ True _ _ _ _) -> "=" 
 
 Not pure
 
->              (Cell.Action _ _ False _ _ _ _ _) -> "IO" 
+>              (Cell.Action _ _ False _ _ _ _) -> "IO" 
 
 >cellFormFill box edit editorObjects dc@(DisplayCell.DisplayCellCode cell@Cell.Lambda{}) = do
 > now <- buttonNewWithLabel (nowText $ Cell.now cell)

@@ -29,7 +29,7 @@ gridSetDisplayCellText (DisplayCellComment (point,_)) text grid =
  gridPutComment point text grid
 
 >gridSetDisplayCellText (DisplayCellCode cell) text grid =
-> let cell'Maybe = (cellPutCode cell text) in
+> let cell'Maybe = (cellPutCode cell text (\point -> gridPointNear grid point)) in
 > case cell'Maybe of
->   Just cell' -> gridPutCellOverwrite cell' (cellPoint cell') grid
->   Nothing    -> grid
+>   Left cell' -> gridPutCellOverwrite cell' (cellPoint cell') grid
+>   Right (cell',strays)    -> grid 

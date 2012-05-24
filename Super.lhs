@@ -49,5 +49,5 @@ Here we have the version of the whole grid haskell project.
 
 |This is the smallest Size a Rectangle can have.
 
->smallRectangle :: Size
->smallRectangle = (1,1)
+>small :: Size
+>small = (1,1)

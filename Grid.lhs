@@ -16,7 +16,6 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 >module Grid where
->import Data.NumInstances
 
 >import qualified Cell
 >import CellMethods
@@ -67,8 +66,8 @@ Put the cell at the point specified into the grid.
 >  grid{gridCells=fst (cellPutCell cell gridCells')}
 >  where gridCells' = gridCells grid
 
->gridPutCellOverwrite :: Cell.Cell -> Point -> Grid -> Grid
->gridPutCellOverwrite cell point grid =
+>gridPutCellOverwrite :: Cell.Cell -> Grid -> Grid
+>gridPutCellOverwrite cell grid =
 >  grid{gridCells=fst (cellPutCell cell gridCells')}
 >   where gridCells' = gridCells grid
 
@@ -81,14 +80,17 @@ Put the cell at the point specified into the grid.
 
 >pointFilledGrid :: Grid -> Point -> Bool
 >pointFilledGrid grid point =
+> elem point $ gridPoints grid
 
-Cells
+>gridPoints :: Grid -> [Point]
+>gridPoints grid =
+> cellPoints (gridCells grid) ++
+> concatMap cellPoints (gridLooseCells grid)
 
->  (cellPointFilled (gridCells grid) point) ||
-
-Or loose cells
-
->  (any (\cell->cellPointFilled cell point) (gridLooseCells grid))
+>gridPointNear :: Grid -> Point -> Point
+>gridPointNear grid point 
+> | not $ elem point $ gridPoints grid = point
+> | otherwise = gridPointNear grid (point + (1,0))
 
 >pointsFilledGrid :: Grid -> [Point] -> Bool
 >pointsFilledGrid grid points = any (pointFilledGrid grid) points
@@ -102,7 +104,7 @@ Or loose cells
 >   cellSplitAtPoint (gridCells grid) point
 
 >  blankActionCell =
->    Cell.Action (Cell.CellCommon (point,smallRectangle) []) "" False False 0 Nothing Nothing next
+>    Cell.Action (Cell.CellCommon (point,small) []) "" False False 0 Nothing next
 
 >  next = 
 >    cellPointsRelocation myTail $ zip (CellMethods.cellPoints myTail) (map ((0,1)+) $ CellMethods.cellPoints myTail) in
@@ -121,7 +123,7 @@ Or loose cells
 
 >   cellsPostDelete =
 >    case cellsPostDeleteMaybe of
->     Just cellsPostDelete -> cellsPostDelete
+>     Just cellsPostDelete' -> cellsPostDelete'
 >     Nothing -> ((gridCells grid),[])
 
 >   looseCellsPostDelete :: [(Cell.Cell,[Cell.Cell])]

@@ -39,7 +39,7 @@ We go through the list both forwards and backwards, completing arrows.
 >      (arrows',unfinished_arrows) <- return (arrowsOf cells [])
 >      arrows <- return (arrows' ++ 
 >                        (fst (arrowsOf (reverse cells) unfinished_arrows)))
->      mapM drawArrow arrows
+>      _ <- mapM drawArrow arrows
 >      return ()
 
 | The 'arrowsOf' or between a list of cells.
@@ -72,8 +72,6 @@ The arrows comming from any other type of cell.
 
 Types of cells which have paths:
 
->             Cell.Action{}      -> True
->             Cell.Destination{} -> True
 >             Cell.Jump{}        -> True
 >             _                  -> False
 >          then maybe [] (\p -> [Path.point p]) (Cell.path cell)

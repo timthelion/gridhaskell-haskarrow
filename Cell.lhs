@@ -20,8 +20,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 >import qualified Path
 >import qualified Super
 
->import Data.Maybe
-
 Patterns are owned by which statements.
 
 >data Pattern = Pattern {patternLabel   :: Label, 
@@ -76,11 +74,7 @@ The getChar function has type IO Char and thus does not need to be "returned." T
 
 >        pull      :: Int, 
 
-|  Path to any far away place where return value of action is used.  Sometimes the stack isn't very usefull though, and we really need to carry a value to another place in the code.  We want to make this as bright visual and clear as possible, so we make a path or line on the screen that shows where each value goes(is used).
-
 >        label     :: Maybe Label,
-
->        path      :: (Maybe Path.Path), 
 
 | The next cell/action in on the grid in executable order.
 
@@ -104,20 +98,13 @@ The getChar function has type IO Char and thus does not need to be "returned." T
 >        next      :: Cell}
 
 
-|  Destination place where we take a value that was aquired a while ago and place it on the stack
+|  Citation take a value that was aquired a while ago and place it on the stack
 
->  | Destination {
+>  | Citation {
 >        common    :: CellCommon,
 
-| Origin place where the value was aquired/returned.
+>        value     :: Label,
 
->        origin    :: Super.Point,
-
->        value     :: String,
-
-| Path to any further uses of the value.
-
->        path      :: (Maybe Path.Path),
 >        next      :: Cell}
 
 Which statement.  One example of how visual programming may be better than textual.
