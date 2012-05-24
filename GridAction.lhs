@@ -19,7 +19,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 >import Grid
 >import DisplayCell
->import Cell
 >import CellMethods
 
 
@@ -31,5 +30,9 @@ gridSetDisplayCellText (DisplayCellComment (point,_)) text grid =
 >gridSetDisplayCellText (DisplayCellCode cell) text grid =
 > let cell'Maybe = (cellPutCode cell text (\point -> gridPointNear grid point)) in
 > case cell'Maybe of
->   Left cell' -> gridPutCellOverwrite cell' (cellPoint cell') grid
->   Right (cell',strays)    -> grid 
+>   Left cell' -> gridPutCellOverwrite cell' grid
+>   Right (cell',strays)    -> 
+>    updatedCell{gridLooseCells=(gridLooseCells updatedCell)++strays}
+>    where updatedCell = (gridPutCellOverwrite cell' grid)
+
+>gridSetDisplayCellText dc _ _ = error $ "Don't know how to set the text of a " ++ (show dc)

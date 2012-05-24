@@ -23,10 +23,8 @@ Libraries external to application.
 
 >import Graphics.UI.Gtk hiding (cellText)
 >import System.Environment
->import Data.List
 >import Data.Maybe
 >import Control.Concurrent
->import System.Posix.Unistd
 >import System.Exit
 >import Control.Monad.IO.Class
 
@@ -58,7 +56,7 @@ This type of mutable object, is defined by the module:
 
 There are also some Super generic types that belong no where else.  Like type Point = (Int, Int)...
 
->import qualified Super
+import qualified Super
 
 For reading and writing grid haskell files.
 
@@ -74,9 +72,7 @@ For compiling to Haskell code.
 
      initGUI
 
->     unsafeInitGUIForThreadedRTS
-
->     gridEditWindowEvent <- newEmptyMVar
+>     _ <- unsafeInitGUIForThreadedRTS
 
 Special MVar used to quit.  Put a value here when you want to terminate.
 
@@ -100,10 +96,10 @@ Special MVar used to quit.  Put a value here when you want to terminate.
 >     editorObjects <- return (GridEditorObjects gridObject' canvasObject' editModeObject' focusedCellObject' focusedRectangleObject' reFocusNeededObject' gridChangedObject' fileObject' filePathObject' gridRecords' focusedCellRecords' focusedRectangleRecords')
 
 >     myWidgets <- loadWidgets exit editorObjects
->     (window,_,canvas,scrwinContainer,_,cellInfo,modeInfo) <- return myWidgets
+>     (window,_,canvas,_,_,cellInfo,modeInfo) <- return myWidgets
 
 >     widgetShowAll window
->     forkOS mainGUI
+>     _ <- forkOS mainGUI
 
 
 Note.  It would seem that order is important here as the sync function for gridObject references scrwinObject.   Luckly it is not.  When syncGridwithScrwin calls updateIO scrwinObject, updateIO will wait till the scrwinObject is initialized before continuing.
@@ -117,7 +113,7 @@ Note.  It would seem that order is important here as the sync function for gridO
 >     objectInit (fileObject editorObjects) (InitializedNotSynced Nothing) noSyncOnGet (saveFile editorObjects)
 >     objectInit (filePathObject editorObjects) (InitializedNotSynced (case filePath of
 >                       ""        -> Nothing
->                       otherwise -> (Just filePath))) noSyncOnGet noSyncOnPut
+>                       _ -> (Just filePath))) noSyncOnGet noSyncOnPut
 >     objectInit (gridChangedObject editorObjects) (InitializedSyncedWithoutSignal False) noSyncOnGet noSyncOnPut
 
 >     signal <- takeMVar exit
@@ -136,6 +132,7 @@ We want to make sure that we have finished saving the file(if we are saving) bef
 >       return True
 >     Just (RecorderSignal _ (Just False)) ->
 >       return False
+>     Just _ -> error "We got an unexpected signal while preforming syncGridwithCanvas."
 >     Nothing -> do
 
 This is as good a time as any to record the state of our grid.  We will keep at least 20 and up to 40 states which can be returned to with the undo(Ctrl-z) function.  We also record the states of various objects who we want to keep in sync with our grid in the case we might go back(undo).
@@ -241,32 +238,32 @@ And we make a new one...
 >         MoveCells{}   -> "Move cells mode | Shfit-F6/Esc Exit Mode | Enter Place Cells"
 >         EditCell{}   -> "Cell edit mode | Esc Exit Mode"
 >         FreeMovement -> "Navigation mode | F6 MoveCell | Shift-F6 MoveCells | F7 insert cell"
->         ShowError message _ -> message)]
+>         ShowError errorMessage _ -> errorMessage)]
 
 >     return ()
 
 >saveFile :: GridEditorObjects -> Maybe String -> Maybe () -> IO()
->saveFile editorObjects (Just contents) signal = do
-> filePath <- updateIOReturning (filePathObject editorObjects) (\filePath -> do
+>saveFile editorObjects (Just contents) _ = do
+> newFilePathMaybe <- updateIOReturning (filePathObject editorObjects) (\filePath -> do
 >  if isNothing filePath
->  then do filePath <- getFilePathFromDialog FileChooserActionSave
->          return (filePath,filePath)
+>  then do filePathFromDialog <- getFilePathFromDialog FileChooserActionSave
+>          return (filePathFromDialog,filePathFromDialog)
 >  else return (filePath,filePath))
 
-> case filePath of
+> case newFilePathMaybe of
 >  Nothing -> return ()
->  Just filePath -> do
->      writeFile filePath contents
+>  Just newFilePath -> do
+>      writeFile newFilePath contents
 
->saveFile _ Nothing signal = return ()
+>saveFile _ Nothing _ = return ()
 
 >openFile :: GridEditorObjects -> IO ()
 >openFile editorObjects =  do
-> filePath <- updateIOReturning (filePathObject editorObjects) (\_ -> do
+> filePathMaybe <- updateIOReturning (filePathObject editorObjects) (\_ -> do
 >   filePath <- getFilePathFromDialog FileChooserActionOpen
 >   return (filePath,filePath))
 
-> case filePath of
+> case filePathMaybe of
 >  Nothing -> return ()
 >  Just filePath -> updateIONoBlockWithSignal (gridObject editorObjects)
 >    (\_->do contents <- readFile filePath
@@ -274,23 +271,30 @@ And we make a new one...
 >     (RecorderSignal False (Just False))
 
 >getFilePathFromDialog :: FileChooserAction -> IO (Maybe FilePath)
->getFilePathFromDialog fileChooserAction = postGUISync $ do
->     fileChooserDialog <- fileChooserDialogNew (Just 
->       (case fileChooserAction of 
->        FileChooserActionSave -> "Save As...Dialog"
->        FileChooserActionOpen -> "Open .. Dialog")) Nothing
->                                     fileChooserAction
->                                     [("Cancel", ResponseCancel),
->                                      (case fileChooserAction of
->                                       FileChooserActionSave -> "Save"
->                                       FileChooserActionOpen -> "Open", ResponseAccept)]
+>getFilePathFromDialog myFileChooserAction = postGUISync $ do
+>     fileChooserDialog <-
+>      fileChooserDialogNew 
+>       (Just 
+>       (case myFileChooserAction of 
+>         FileChooserActionSave -> "Save As...Dialog"
+>         FileChooserActionOpen -> "Open .. Dialog"
+>         _ -> error "Unexpected return value(action) from fileChooser."))
+>       Nothing
+>       myFileChooserAction
+>       [("Cancel", ResponseCancel),
+>        (case myFileChooserAction of
+>         FileChooserActionSave -> "Save"
+>         FileChooserActionOpen -> "Open"
+>         _ -> error "Error, received unexpected FileChooserAction type in getFilePathFromDialog.", ResponseAccept)]
+
  
->     fileChooserSetDoOverwriteConfirmation fileChooserDialog (case fileChooserAction of 
+>     fileChooserSetDoOverwriteConfirmation fileChooserDialog (case myFileChooserAction of 
 >         FileChooserActionSave -> True
->         FileChooserActionOpen -> False)
+>         FileChooserActionOpen -> False
+>         _ -> error "Error, received unexpected FileChooserAction type in getFilePathFromDialog.")
 >     widgetShow fileChooserDialog
->     response <- dialogRun fileChooserDialog
->     value <- case response of
+>     myFileDialogResponse <- dialogRun fileChooserDialog
+>     value <- case myFileDialogResponse of
 >          ResponseCancel -> return Nothing
 >          ResponseAccept -> do {
 >                       newFilenameMaybe <- fileChooserGetFilename fileChooserDialog;
@@ -298,11 +302,12 @@ And we make a new one...
 >                                    Nothing -> Nothing
 >                                    Just path -> (Just path));}
 >          ResponseDeleteEvent -> return Nothing
+>          _ -> error "unexpected responce from fileChooserDialog in getFilePathFromDialog."
 >     widgetDestroy fileChooserDialog
 >     return value
 
 >syncFocusedRectangleWithScrolledWindow :: GridEditorObjects -> Rectangle -> Maybe () -> IO()
->syncFocusedRectangleWithScrolledWindow editorObjects rectangle@(Rectangle x y _ _) signal = do
+>syncFocusedRectangleWithScrolledWindow editorObjects (Rectangle x y _ _) _ = do
 >  updateIO (canvasObject editorObjects) (\scrolledWindow -> do {
 >   postGUIAsync $ do {
 
@@ -324,11 +329,11 @@ End of hack.
 >   adjustmentSetValue adjustmentY (scrollCord (fromIntegral y) upperY lowerY (fromIntegral aH));
 >};
 >  return scrolledWindow;});
-
->scrollCord cord upper lower boxAllocation
-> | cord + boxAllocation/2 > upper = upper - boxAllocation
-> | cord - boxAllocation/2 < lower = lower
-> | otherwise                      = cord - boxAllocation/2
+>  where 
+>   scrollCord cord upper lower boxAllocation
+>    | cord + boxAllocation/2 > upper = upper - boxAllocation
+>    | cord - boxAllocation/2 < lower = lower
+>    | True                           = cord - boxAllocation/2
 
 >loadGrid :: IO (Grid,FilePath)
 >loadGrid = do
@@ -380,7 +385,7 @@ End of hack.
 >     actionGroupAddActionWithAccel actionGroup exitAction (Just "<Control>e")
 
 >     ui <- uiManagerNew
->     uiManagerAddUiFromString ui "<ui>\
+>     _ <- uiManagerAddUiFromString ui "<ui>\
 >\           <menubar>\
 >\            <menu action=\"FMA\">\
 >\              <menuitem action=\"NEWA\" />\
@@ -402,7 +407,7 @@ End of hack.
 >                        Nothing -> error "Cannot get menubar from string." 
 >     boxPackStart buttonBox menubar PackNatural 0
 
->     newAction `on` actionActivated $ do {
+>     _ <- newAction `on` actionActivated $ do {
 >       liftIO $ do {
 >          continue <- saveOnPrompt window editorObjects "Save file before creating new one?";
 >          if continue 
@@ -411,37 +416,37 @@ End of hack.
 >            updateWithSignal (gridObject editorObjects) (\_-> emptyGrid) (RecorderSignal False (Just False));
 >          else return ()}}
 
->     saveAsAction `on` actionActivated $ do {
+>     _ <- saveAsAction `on` actionActivated $ do {
 >       liftIO $ do {updateBlock (filePathObject editorObjects) (\_->Nothing);
 >           updateMultiWithSignal (gridObject editorObjects)  (RecorderSignal False (Just False)) $
 >            finallyUpdate
 >             (fileObject editorObjects)
->              (\grid file -> ((Just $ saveGrid(grid)),grid))};}
+>              (\grid _ -> ((Just $ saveGrid(grid)),grid))};}
 
->     openAction `on` actionActivated $ do {
+>     _ <- openAction `on` actionActivated $ do {
 >       liftIO $ do {
 >          continue <- saveOnPrompt window editorObjects "Save file before opening a new one?";
 >          if continue
->          then do forkIO $ openFile editorObjects
+>          then do _ <- forkIO $ openFile editorObjects
 >                  return ()
 >          else return ()
 >     }}
 
->     saveAction `on` actionActivated $ do{
+>     _ <- saveAction `on` actionActivated $ do{
 >       liftIO $ do {
 >           updateMultiWithSignal (gridObject editorObjects) (RecorderSignal False (Just False)) $
 >            finallyUpdate
 >             (fileObject editorObjects)
->              (\grid file -> ((Just $ saveGrid(grid)),grid))};}
+>              (\grid _ -> ((Just $ saveGrid(grid)),grid))};}
 
->     compileAction `on` actionActivated $ do{
+>     _ <- compileAction `on` actionActivated $ do{
 >         liftIO $ do {
 >           gridHaskellFilePath <- getObjectValue (filePathObject editorObjects);
 >           case gridHaskellFilePath of
 >             Just filePath -> preCompileToFile filePath (guessHaskellFileName filePath)
 >             Nothing -> return ()};}
 
->     exitAction `on` actionActivated $ do{
+>     _ <- exitAction `on` actionActivated $ do{
 >         liftIO $ do {quit exit window editorObjects};}
 
 >     cellInfo <- labelNew Nothing
@@ -450,7 +455,7 @@ End of hack.
 >     modeInfo <- labelNew Nothing
 >     boxPackStart buttonBox modeInfo PackNatural 0
 
->     window `on` keyPressEvent $ do
+>     _ <- window `on` keyPressEvent $ do
 >            modifier <- eventModifier
 >            key <- eventKeyName
 
@@ -463,7 +468,7 @@ End of hack.
 >                   (\mode->
 >                     case mode of
 >                       EditCell{} -> (mode,False)
->                       otherwise  -> (FreeMovement,True))
+>                       _          -> (FreeMovement,True))
 >             ([],"F6") ->
 >              liftIO $ do
 >               updateWith (focusedCellObject editorObjects) (editModeObject editorObjects)
@@ -472,8 +477,8 @@ No need to finish the pattern with a Nothing, tryEvent will catch the exception.
 
 >                      (\(Just focusedCell) editMode -> 
 >                        case editMode of
->                        MoveCell dc  -> FreeMovement
->                        otherwise -> MoveCell focusedCell);
+>                        MoveCell _   -> FreeMovement
+>                        _            -> MoveCell focusedCell);
 >               return True;
 
 >             ([Shift],"F6") ->
@@ -484,15 +489,15 @@ No need to finish the pattern with a Nothing, tryEvent will catch the exception.
 
 >                      (\(Just focusedCell) editMode -> 
 >                        case editMode of
->                        MoveCells dc  -> FreeMovement
->                        otherwise -> MoveCells focusedCell);
+>                        MoveCells _  -> FreeMovement
+>                        _            -> MoveCells focusedCell);
 >               return True;
 
 
 >             ([],"F7") ->
 >              liftIO $ do
 >               (Just dc) <- getObjectValue (focusedCellObject editorObjects) 
->               updateIO (editModeObject editorObjects) $ \mode -> do
+>               updateIO (editModeObject editorObjects) $ \_ -> do
 >                success <- updateReturning
 >                 (gridObject editorObjects)
 >                  (\grid -> gridInsertBlankAction grid (DisplayCell.displayCellPoint dc))
@@ -503,14 +508,14 @@ No need to finish the pattern with a Nothing, tryEvent will catch the exception.
 
 >             ([Control],"z")  -> 
 >              liftIO $ do
->                undoStateAction (focusedCellRecords editorObjects)
->                undoStateAction (focusedRectangleRecords editorObjects)
->                undoStateActionOfRecorder (gridRecords editorObjects)
+>                _ <- undoStateAction (focusedCellRecords editorObjects)
+>                _ <- undoStateAction (focusedRectangleRecords editorObjects)
+>                _ <- undoStateActionOfRecorder (gridRecords editorObjects)
 >                return True
                
->             otherwise -> return False
+>             _ -> return False
 
->     window `on` objectDestroy $ do {
+>     _ <- window `on` objectDestroy $ do {
 >      liftIO $ do {quit exit window editorObjects};
 >     return ();}
 
@@ -526,8 +531,8 @@ No need to finish the pattern with a Nothing, tryEvent will catch the exception.
 
 >saveOnPrompt :: Window -> GridEditorObjects -> String -> IO Bool
 >saveOnPrompt window editorObjects prompt = 
->      updateIOReturningInThisThread (gridChangedObject editorObjects) (\changed -> do {
->       saveOrNot <- (if changed
+>      updateIOReturningInThisThread (gridChangedObject editorObjects) (\gridChanged -> do {
+>       saveOrNot <- (if gridChanged
 >       then do {
 >            saveOrNotDialog <- messageDialogNew (Just window) [] MessageQuestion ButtonsYesNo prompt;
 >            saveOrNot <- dialogRun saveOrNotDialog; 
@@ -540,9 +545,9 @@ No need to finish the pattern with a Nothing, tryEvent will catch the exception.
 >                         (gridObject editorObjects) $
 >                        finallyUpdate
 >                         (fileObject editorObjects) $
->            (\grid file -> ((Just $ saveGrid(grid)),grid));
+>            (\grid _ -> ((Just $ saveGrid(grid)),grid));
 >                       return (False,True);}
 >         ResponseNo  -> return (False,True)
 >         ResponseDeleteEvent -> return (False,False) 
 >         ResponseNone -> return (False,False)
->         otherwise   -> error $ "Cannot process dialog responce:" ++ (show saveOrNot));})
+>         _            -> error $ "Cannot process dialog responce:" ++ (show saveOrNot));})

@@ -166,8 +166,7 @@ DisplayCellMVarLabels
 
 DisplayCellPaths
 
->       Cell.Action{}       -> (displayCellsfromPath (Cell.path cell)) ++
->                              case Cell.label cell of
+>       Cell.Action{}       -> case Cell.label cell of
 >                                Just _ -> [DisplayCellMVarLabel cell]
 >                                Nothing             -> []
 >       Cell.Jump{}         -> (displayCellsfromPath (Cell.path cell))

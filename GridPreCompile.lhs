@@ -45,15 +45,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 >    "import " ++ _import ++ "\n" ++ (importsCode' imports)
 >importsCode' [] = ""
 
-| This will have to change if we make Prototype into something other than a String, right now we just concatinate everything together...
-
->pureFunctionsCode :: [(Prototype, String)] -> String
->pureFunctionsCode ((prototype,code):functions) =
->       prototype ++ "\n" ++
->       code ++ "\n" ++
->       (pureFunctionsCode functions)
->pureFunctionsCode [] = ""
-
 >cellsCode :: Cell.Cell -> String
 >cellsCode grid = actionsCode grid grid Scope.TopScope 0 False
 
@@ -72,6 +63,7 @@ Unique symbol names
 >     name_type++"_"++(show (abs x))++"x"++"_"++(show (abs y))++" "
 >	| x >= 0 && y >= 0 =
 >     name_type++(show x)++"x"++(show y)++" "
+>   | True = error "The impossible happened. OMG we're all going to die!"
 
 | functionCodes are the names of the Haskell functions to wich we precompile.  They look like "f0x0" "f1x3" "f3x75"  "f_3x2" If the function was displayed on the grid at point (-3,2).
 
@@ -82,15 +74,15 @@ Unique symbol names
 
 We write the values first.
 
->valueCodesLHS (Scope.Scope (value:values) patterns higher) =
->    (concatMap (\value-> " "++value++" ") (value:values)) ++
+>valueCodesLHS (Scope.Scope (myValue:myValues) patterns higher) =
+>    (concatMap (\thisValue-> " "++thisValue++" ") (myValue:myValues)) ++
 >    (valueCodesLHS (Scope.Scope [] patterns higher))
 
 And then the patterns.
 
->valueCodesLHS (Scope.Scope [] (pattern:patterns) higher) = 
->    (concatMap (\pattern-> " "++pattern++" ") (pattern:patterns)) ++
->    (concatMap (\(_,n)-> " pattern"++(show n)++" ") $ zip (pattern:patterns) [1..]) ++
+>valueCodesLHS (Scope.Scope [] (myPattern:myPatterns) higher) = 
+>    (concatMap (\thisPattern-> " "++thisPattern++" ") (myPattern:myPatterns)) ++
+>    (concatMap (\(_,n)-> " pattern"++(show n)++" ") $ zip (myPattern:myPatterns) ([1::Int ..])) ++
 >    (valueCodesLHS (Scope.Scope [] [] higher))
 
 >valueCodesLHS (Scope.Scope [] [] Scope.TopScope) = ""
@@ -101,15 +93,15 @@ And then the patterns.
 
 We write the values first.
 
->valueCodesRHS (Scope.Scope (value:values) patterns higher) =
->    (concatMap (\value-> " "++value++" ") (value:values)) ++
+>valueCodesRHS (Scope.Scope (myValue:myValues) patterns higher) =
+>    (concatMap (\thisValue-> " "++thisValue++" ") (myValue:myValues)) ++
 >    (valueCodesRHS (Scope.Scope [] patterns higher))
 
 And then the patterns.
 
->valueCodesRHS (Scope.Scope [] (pattern:patterns) higher) = 
->    (concatMap (\(_,n)-> " pattern"++(show n)++" ") $ zip (pattern:patterns) [1..]) ++
->    (concatMap (\(_,n)-> " pattern"++(show n)++" ") $ zip (pattern:patterns) [1..]) ++
+>valueCodesRHS (Scope.Scope [] (myPattern:myPatterns) higher) = 
+>    (concatMap (\(_,n)-> " pattern"++(show n)++" ") $ zip (myPattern:myPatterns) [1 :: Int ..]) ++
+>    (concatMap (\(_,n)-> " pattern"++(show n)++" ") $ zip (myPattern:myPatterns) [1 :: Int ..]) ++
 >    (valueCodesRHS (Scope.Scope [] [] higher))
 
 >valueCodesRHS (Scope.Scope [] [] Scope.TopScope) = ""
@@ -149,10 +141,10 @@ f1x1 v0x1  p1 p2  = return ((==) p1 p2 ) >>= \v1x1 ->f2x1 v0x1  v1x1
 >	" = " 
 
 >bodyCode :: String -> Bool -> Int -> String
->bodyCode code preturn stack =
+>bodyCode innerCode preturn stack =
 >	if preturn
->	then "return (" ++ code ++ 	(stackCode stack) ++ ")"
->	else code ++ (stackCode stack)
+>	then "return (" ++ innerCode ++ 	(stackCode stack) ++ ")"
+>	else innerCode ++ (stackCode stack)
 
 >bindCode :: Scope.Scope -> Bool -> Bool -> [Int] -> Cell.Cell -> String
 >bindCode values addValue push stack next =
@@ -178,10 +170,6 @@ f1x1 v0x1  p1 p2  = return ((==) p1 p2 ) >>= \v1x1 ->f2x1 v0x1  v1x1
 ------------
 Other Code Snippets
 
->mvarDeclarations :: [String] -> String
->mvarDeclarations mvars	= "do" ++ concatMap mvar_declaration mvars
->    where mvar_declaration mvar = " "++mvar++" <- newEmptyMVar ;"
-
 This is the code for the arguments which are passed to our grid in the Start Cell.
 
 >argumentCodes :: [(Rectangle,String)] -> String
@@ -198,7 +186,7 @@ This is the code for the arguments which are passed to our grid in the Start Cel
 >   (stackCode stack) ++ ");" ++
 >   (forksCode children values stack)
 
->forksCode [] values stack = ""
+>forksCode [] _ _ = ""
 
 ----------------
 actionsCode
@@ -216,13 +204,13 @@ actionsCode
 ----------------------------------------------------------------
 Functions in the IO monad are handled differently from others.  The last argument, "pure", will be false.
 
->actionsCode (Cell.Action common code preturn push pull label next) top values stack False =
+>actionsCode (Cell.Action common actionCode preturn push pull label next) top values stack False =
 >	functionHeader (CellMethods.commonPoint common) values stack ++
->	(bodyCode code preturn pull) ++
+>	(bodyCode actionCode preturn pull) ++
 >	bindCode (Scope.addValueFromLabel values label) (isJust label) push [pull+1..stack] next ++
 >	functionNext next top (Scope.addValueFromLabel values label) (stack-pull+(if push then 1 else 0)) False
 
->actionsCode (Cell.Lambda common arguments arrow now pull pure body next) top values stack False =
+>actionsCode (Cell.Lambda common arguments _ _ pull pure body next) top values stack False =
 >   functionHeader (CellMethods.commonPoint common) values stack ++
 >   "do lambda_ <- (" ++
 >   (bodyCode lambdaCode False pull) ++ ");" ++
@@ -313,23 +301,23 @@ The seccond value of NewEmptyMVar is the labelPoint.  The place where the lable 
 
 >actionsCode (Cell.PutMVar common mvarLabel next) top values stack False = 
 
->  actionsCode (Cell.Action common code False False 1 Nothing next) top values stack False
+>  actionsCode (Cell.Action common actionCode False False 1 Nothing next) top values stack False
 
->    where code = "putMVar "++(CellMethods.labelText mvarLabel)
+>    where actionCode = "putMVar "++(CellMethods.labelText mvarLabel)
 
 >actionsCode (Cell.TakeMVar common mvarLabel next) top values stack False =
->  actionsCode (Cell.Action common code False True 0 Nothing next) top values stack False
->    where code = "takeMVar "++(CellMethods.labelText mvarLabel)
+>  actionsCode (Cell.Action common actionCode False True 0 Nothing next) top values stack False
+>    where actionCode = "takeMVar "++(CellMethods.labelText mvarLabel)
 
->actionsCode (Cell.Return common) top values stack False =
+>actionsCode (Cell.Return common) _ values stack False =
 >  functionHeader (CellMethods.commonPoint common) values stack ++
 >  "return p" ++ (show stack)
 
->actionsCode (Cell.End common) top values stack False =
+>actionsCode (Cell.End common) _ values stack False =
 >   functionHeader (CellMethods.commonPoint common) values stack ++
 >   "return ()"
 
->actionsCode (Cell.Exit common) top values stack False =
+>actionsCode (Cell.Exit common) _ values stack False =
 >   functionHeader (CellMethods.commonPoint common) values stack ++
 >   "putMVar exit p1 >> exitWith p1"
 

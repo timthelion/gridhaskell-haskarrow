@@ -18,11 +18,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 >module GridDrawing (drawGrid) where
 
 >import Graphics.UI.Gtk
->import Data.Tuple
->import Data.List
->import Data.Maybe
->import Data.NumInstances
->import Control.Concurrent
 >import Control.Monad.IO.Class
 
 >import Grid
@@ -31,7 +26,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 >import qualified DisplayCell
 >import qualified Cell
 >import qualified CellMethods
->import qualified Path
 >import ThreadObject
 >import ArrowDrawing
 >import EditModes
@@ -91,7 +85,7 @@ and then we zip those points with the widgets we want to attach to that table us
 
 Now we add an event to draw the lines in our diagram.
 
->     onExpose table  $
+>     _ <- onExpose table  $
 >       (\_ -> do drawWin <- widgetGetDrawWindow table
 >                 allocations <- (mapM widgetGetAllocation (map fst cellForms))
 >                 renderWithDrawable drawWin (drawArrows (zip allocations displayCellsFilled))
@@ -116,16 +110,13 @@ Now we add an event to draw the lines in our diagram.
 
 >     }
 
->focusedPoint (Just dc) = (DisplayCell.displayCellPoint dc)
->focusedPoint Nothing = (0,0)
-
 | 'cellForm' generates a gtk widget which represents the a cell in our grid.  The return type of this should be changed, so that we get something more usefull than a VBox.  This should return a data which includes all widgets who's contents might want to be updated or saved.
 
 >cellForm :: GridEditorObjects -> DisplayCell.DisplayCell -> IO (Box,Widget)
 
 >cellForm editorObjects dc = do
 >       box <- hBoxNew False 0
->       box `on` keyPressEvent $ do
+>       _ <- box `on` keyPressEvent $ do
 >        modifier <- eventModifier
 >        key <- eventKeyName
 >        case (modifier,key) of
@@ -134,7 +125,7 @@ Now we add an event to draw the lines in our diagram.
 >                update (gridObject editorObjects)
 >                       $ (\grid -> deleteCellGrid (DisplayCell.displayCellPoint dc) grid)
 >               return True
->           otherwise     -> return False
+>           _     -> return False
 
 >       widget <- cellFormFill (toBox box) False editorObjects dc
 >       return ((toBox box), widget)
@@ -144,7 +135,7 @@ Now we add an event to draw the lines in our diagram.
 >cellFormFill box edit editorObjects dc@(DisplayCell.DisplayCellCode cell@Cell.Action{}) = do
 >        pure <- buttonNewWithLabel pureText
 >        set pure [buttonRelief := ReliefHalf]
->        pure `on` buttonActivated $ do
+>        _ <- pure `on` buttonActivated $ do
 >              liftIO $ do
 >               update (gridObject editorObjects) 
 >                      (\grid -> gridPutCell (cell{Cell.return = not $ Cell.return cell}) grid)
@@ -155,7 +146,7 @@ Now we add an event to draw the lines in our diagram.
 >        set bind [buttonRelief := ReliefHalf]
 >        boxPackStart box bind PackNatural 0
 
->        bind `on` keyPressEvent $ do
+>        _ <- bind `on` keyPressEvent $ do
 >            modifier <- eventModifier
 >            key <- eventKeyName
 >            case (modifier,key) of
@@ -183,7 +174,7 @@ Now we add an event to draw the lines in our diagram.
 >                      (\grid -> gridPutCell (CellMethods.cellPutPush cell False) grid)
 >               return True
 
->             othrewise ->
+>             _ ->
 >              return False
 
 >        widget <- cellFormFill' (DisplayCell.displayCellText dc) (toBox box) edit editorObjects dc
@@ -198,6 +189,7 @@ Now we add an event to draw the lines in our diagram.
 >              (Cell.Action _ _ _ True n _ _) -> (show n) ++ "^" 
 
 >              (Cell.Action _ _ _ False n _ _) -> (show n) ++ ":" 
+>              _ -> error $ "Man are we lost.  This cell was supposed to be an Action, but something impossible happened." ++ (show cell)
 
 >            pureText :: String
 >            pureText =
@@ -209,12 +201,13 @@ Pure
 
 Not pure
 
->              (Cell.Action _ _ False _ _ _ _) -> "IO" 
+>              (Cell.Action _ _ False _ _ _ _) -> "IO"
+>              _ -> error $ "Man are we lost.  This cell was supposed to be an Action, but something impossible happened." ++ (show cell)
 
 >cellFormFill box edit editorObjects dc@(DisplayCell.DisplayCellCode cell@Cell.Lambda{}) = do
 > now <- buttonNewWithLabel (nowText $ Cell.now cell)
 > set now [buttonRelief := ReliefHalf]
-> now `on` buttonActivated $ do
+> _ <- now `on` buttonActivated $ do
 >  liftIO $ do
 >   update (gridObject editorObjects) 
 >          (\grid -> gridPutCell (cell {Cell.now = 
@@ -224,7 +217,7 @@ Not pure
 > set bind [buttonRelief := ReliefHalf]
 > boxPackStart box bind PackNatural 0
 
-> bind `on` keyPressEvent $ do
+> _ <- bind `on` keyPressEvent $ do
 >  modifier <- eventModifier
 >  key <- eventKeyName
 >  case (modifier,key) of
@@ -240,7 +233,7 @@ Not pure
 >            (\grid -> gridPutCell (CellMethods.incrimentPull cell) grid)
 >     return True
 
->   otherwise -> return False
+>   _ -> return False
 
 > widget <- cellFormFill' (DisplayCell.displayCellText dc) (toBox box) edit editorObjects dc
 
@@ -273,18 +266,18 @@ Not pure
                 (editModeAction editorObjects dc box);
              return False;}
     
->         onClicked enter (do {updateIONoBlock (editModeObject editorObjects) (editModeAction editorObjects dc box)})
+>         _ <- onClicked enter (do {updateIONoBlock (editModeObject editorObjects) (editModeAction editorObjects dc box)})
 
->         enter `on` focusOutEvent $ do 
+>         _ <- enter `on` focusOutEvent $ do 
 >             { liftIO $ do
 >            update (editModeObject editorObjects)
 >                   (\mode -> case mode of
 >                              ShowError e True -> ShowError e False
 >                              ShowError _ False -> FreeMovement
->                              otherwise   -> mode);
+>                              _   -> mode);
 >               return False};
 
->         enter `on` focusInEvent $ do 
+>         _ <- enter `on` focusInEvent $ do 
 >          { liftIO $ do {
 >            update (focusedCellObject editorObjects)
 >                   (\_->(Just dc));
@@ -300,37 +293,40 @@ Not pure
 >         boxPackStart box entry PackNatural 0
 >         widgetGrabFocus entry;
 
->         entry `on` focusOutEvent $ do 
+>         _ <- entry `on` focusOutEvent $ do 
 >             { liftIO $ do
 >               updateIO (editModeObject editorObjects) 
 >                        (editModeCancleCellEdit editorObjects dc box);
 >               return False};
 
->         entry `on` keyPressEvent $ tryEvent $ do
+>         _ <- entry `on` keyPressEvent $ do
 >            key  <- eventKeyName
 
 >            case key of
 >             "Return" ->
 >              liftIO $ do
->               text <- entryGetText entry
->               update (gridObject editorObjects) (GridAction.gridSetDisplayCellText dc text);
+>               entriesText <- entryGetText entry
+>               update (gridObject editorObjects) (GridAction.gridSetDisplayCellText dc entriesText);
+>               return True
 
 >             "Escape" -> 
 >              liftIO $ do
 >               updateIO (editModeObject editorObjects) 
 >                        (editModeCancleCellEditEscape editorObjects dc box);
+>               return True 
+>             _ -> return False
 
 >         return (toWidget entry)
 
 >editModeAction :: GridEditorObjects -> DisplayCell.DisplayCell -> Box -> EditMode -> IO EditMode
 
->editModeAction editorObjects dc vbox ShowError{} = return FreeMovement
+>editModeAction _ _ _ ShowError{} = return FreeMovement
 
 If we are in FreeMovement mode we make a text entry and enter EditCell mode.
 
 >editModeAction editorObjects dc vbox FreeMovement = do
 >   postGUISync (do {
-
+ 
 If we are on an End, Exit, or Return cell, we should move this cell and make a new one to edit.
 
 >     let addCell common = do {
@@ -338,7 +334,7 @@ If we are on an End, Exit, or Return cell, we should move this cell and make a n
 >       (gridObject editorObjects)
 >         (\grid -> gridInsertBlankAction grid (CellMethods.commonPoint common))} in do
 
->   mDisplayCell <- (case dc of
+>   maybeNewDisplayCell <- (case dc of
 >      DisplayCell.DisplayCellCode (Cell.Exit common) -> do 
 >         mCell <- (addCell common)
 >         return $ case mCell of {Nothing -> Nothing ; Just cell -> Just $ DisplayCell.DisplayCellCode cell} 
@@ -349,32 +345,32 @@ If we are on an End, Exit, or Return cell, we should move this cell and make a n
 >         mCell <- (addCell common)
 >         return $ case mCell of {Nothing -> Nothing ; Just cell -> Just $ DisplayCell.DisplayCellCode cell}
 >      DisplayCell.DisplayCellBlank {} -> return Nothing
->      otherwise  -> return $ Just dc);
+>      _  -> return $ Just dc);
 
->   case mDisplayCell of
+>   case maybeNewDisplayCell of
 >    Nothing -> (return (ShowError "Cannot add a new Cell, there is something in the way." True))
->    Just dc -> do
+>    Just newDC -> do
 >     containerForeach vbox (containerRemove vbox);
 
      print "filling with entry box";
 
->     cellFormFill vbox True editorObjects dc; 
+>     _ <- cellFormFill vbox True editorObjects newDC; 
 >     widgetShowAll vbox;
->     return (EditCell dc);
+>     return (EditCell newDC);
 >   })
   
 
->editModeAction editorObjects dc vbox (MoveCell cellWe'reMoving) = 
+>editModeAction editorObjects dc _ (MoveCell cellWe'reMoving) = 
 >   case cellWe'reMoving of
 >     DisplayCell.DisplayCellBlank{} -> return (FreeMovement)
->     otherwise -> do
+>     _ -> do
 >              relocationSuccessfull <- updateReturning (gridObject editorObjects)
 >                     (\grid -> gridPointsRelocation grid [(DisplayCell.displayCellPoint cellWe'reMoving,DisplayCell.displayCellPoint dc)])
 >              if relocationSuccessfull
 >              then return (FreeMovement)
 >              else return (ShowError "Cannot move cell, there is something in the way." True)
 
->editModeAction editorObjects dc vbox (MoveCells cellWe'reMoving) = 
+>editModeAction editorObjects dc _ (MoveCells cellWe'reMoving) = 
 >   case cellWe'reMoving of
 >     DisplayCell.DisplayCellCode cell -> do
 >              relocationSuccessfull <- updateReturning (gridObject editorObjects)
@@ -386,13 +382,15 @@ If we are on an End, Exit, or Return cell, we should move this cell and make a n
 >       oldPoints = CellMethods.cellPoints cell
 >       newPoints = map (difference +) oldPoints 
 >       difference = DisplayCell.displayCellPoint dc - (CellMethods.cellPoint cell)
->     otherwise -> return (FreeMovement)
+>     _ -> return (FreeMovement)
+
+>editModeAction _ _ _ editMode = error $ "Error. This edit mode hasn't been implimented yet." ++ (show editMode)
 
 >editModeCancleCellEdit :: GridEditorObjects -> DisplayCell.DisplayCell -> Box -> EditMode -> IO EditMode
 >editModeCancleCellEdit editorObjects dc vbox EditCell{} = do
 >   postGUIAsync (do {
 >   containerForeach vbox (containerRemove vbox);
->   cellFormFill vbox False editorObjects dc; 
+>   _ <- cellFormFill vbox False editorObjects dc; 
 >   widgetShowAll vbox;
 
 >   })
@@ -401,9 +399,8 @@ If we are on an End, Exit, or Return cell, we should move this cell and make a n
 >editModeCancleCellEdit _ _ _ FreeMovement = do
 >  return FreeMovement
 
->editModeCancleCellEdit _ _ _ mode = do
->  return $ error "Help! Expected to be in EditCell mode, but instead I got:" ++ (show mode)
->  return FreeMovement
+>editModeCancleCellEdit _ _ _ mode =
+> error $ "Help! Expected to be in EditCell mode, but instead I got:" ++ (show mode)
 
 >editModeCancleCellEditEscape :: GridEditorObjects -> DisplayCell.DisplayCell -> Box -> EditMode -> IO EditMode
 >editModeCancleCellEditEscape editorObjects dc vbox EditCell{} = do
@@ -414,6 +411,9 @@ If we are on an End, Exit, or Return cell, we should move this cell and make a n
 >   widgetGrabFocus focusedWidget
 >   })
 >   return FreeMovement
+
+>editModeCancleCellEditEscape _ _ _ editMode =
+> error $ "Looks like we are pretty lost.  We thought we MUST be in EditCell mode for this function to get evaluated :( instead it seems we're in " ++ (show editMode)
 
 >attachCellForm :: Table -> Box -> (Int,Int) -> IO ()
 >attachCellForm table form (x,y) = 

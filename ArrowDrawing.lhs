@@ -50,8 +50,8 @@ We go through the list both forwards and backwards, completing arrows.
 
 Path Arrows
 
->arrowsOf ((r, (DisplayCell.DisplayCellPath path)):cells) unfinished_arrows = 
-> arrowsOf' r (Path.point path) unfinished_arrows [(Path.point (Path.next path))] cells
+>arrowsOf ((r, (DisplayCell.DisplayCellPath myPath)):cells) unfinished_arrows = 
+> arrowsOf' r (Path.point myPath) unfinished_arrows [(Path.point (Path.next myPath))] cells
 
 
 The arrows going down to the branches of a switch.

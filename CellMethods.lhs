@@ -353,10 +353,7 @@ We use this to build a list of cells for display on the screen.
 >   map (\thisLabel -> labelPoint thisLabel) (arguments cell)
 >  Action{} -> (case (label cell) of
 >               Just myLabel -> [labelPoint myLabel]
->               Nothing         -> []) ++
->              (case (path cell) of
->               Just myPath -> Path.pathPoints myPath
->               Nothing   -> [])
+>               Nothing         -> [])
 >  Lambda{} -> (map (\thisLabel -> labelPoint thisLabel) (arguments cell)) ++
 >              [rectanglePoint $ arrow cell]
 >  Citation{} -> [labelPoint $ value cell]
