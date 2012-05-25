@@ -231,13 +231,14 @@ And we make a new one...
 >syncEditModeWithLabel modeInfo mode _ = postGUIAsync $ do
 >     set modeInfo [ labelText := 
 >       (case mode of
->         AddAction{}  -> "Add action mode"
+>         AddFork{}  -> "Add fork mode"
 >         AddPattern{} -> "Add pattern mode"
 >         EditPath{}   -> "Path edit mode"
 >         MoveCell{}   -> "Move cell mode | F6/Esc Exit Mode | Enter Place Cell"
 >         MoveCells{}   -> "Move cells mode | Shfit-F6/Esc Exit Mode | Enter Place Cells"
 >         EditCell{}   -> "Cell edit mode | Esc Exit Mode"
->         FreeMovement -> "Navigation mode | F6 MoveCell | Shift-F6 MoveCells | F7 insert cell"
+>         Connect{}    -> "Connect cell mode | Esc Exit Mode | Enter connect cell"
+>         FreeMovement -> "Navigation mode | F6 MoveCell | Shift-F6 MoveCells | F7 insert cell | F8 Connect cell"
 >         ShowError errorMessage _ -> errorMessage)]
 
 >     return ()
@@ -492,7 +493,6 @@ No need to finish the pattern with a Nothing, tryEvent will catch the exception.
 >                        MoveCells _  -> FreeMovement
 >                        _            -> MoveCells focusedCell);
 >               return True;
-
 
 >             ([],"F7") ->
 >              liftIO $ do

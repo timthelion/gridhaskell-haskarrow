@@ -96,6 +96,10 @@ We use this to build a list of cells for display on the screen.
 > cell{push = p}
 
 
+>cellPutCellDiscardingStrays :: Cell -> Cell -> Cell
+>cellPutCellDiscardingStrays  whatToPut whereToPut =
+> fst $ cellPutCell whatToPut whereToPut
+
 |Put the first cell into the seccond cell(tree), at the point of the first cell.  We return a tuple with our new tree of cells, plus the cells that used to come after the cell we just replaced.
 
 >cellPutCell :: Cell -> Cell -> (Cell,Maybe Cell)

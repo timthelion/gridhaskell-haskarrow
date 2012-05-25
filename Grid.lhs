@@ -17,6 +17,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 >module Grid where
 
+>import Data.List
+
 >import qualified Cell
 >import CellMethods
 >import Super
@@ -66,11 +68,6 @@ Put the cell at the point specified into the grid.
 >  grid{gridCells=fst (cellPutCell cell gridCells')}
 >  where gridCells' = gridCells grid
 
->gridPutCellOverwrite :: Cell.Cell -> Grid -> Grid
->gridPutCellOverwrite cell grid =
->  grid{gridCells=fst (cellPutCell cell gridCells')}
->   where gridCells' = gridCells grid
-
 >gridPointsRelocation :: Grid -> [(Super.Point,Super.Point)] -> (Grid,Bool)
 >gridPointsRelocation grid relocations =
 > if not $ pointsFilledGrid grid $ map snd relocations
@@ -87,6 +84,8 @@ Put the cell at the point specified into the grid.
 > cellPoints (gridCells grid) ++
 > concatMap cellPoints (gridLooseCells grid)
 
+| Returns the neares point to the given point which is not occupied by another cell in the grid.
+
 >gridPointNear :: Grid -> Point -> Point
 >gridPointNear grid point 
 > | not $ elem point $ gridPoints grid = point
@@ -94,6 +93,58 @@ Put the cell at the point specified into the grid.
 
 >pointsFilledGrid :: Grid -> [Point] -> Bool
 >pointsFilledGrid grid points = any (pointFilledGrid grid) points
+
+>isTopLevelStray :: Grid -> Cell.Cell -> Bool
+>isTopLevelStray grid cell =
+> let cell'sPoint = CellMethods.cellPoint cell in
+>  any (\stray -> cell'sPoint == CellMethods.cellPoint stray) $ gridLooseCells grid
+
+>gridConnectCells :: Grid -> Cell.Cell -> Cell.Cell -> Maybe Grid
+>gridConnectCells grid cellToConnect whereToConnect =
+> case gridWithRelocatedCellsMaybe of
+>  Just gridWithRelocatedCells ->
+>   Just $ gridWithRelocatedCells
+>   {gridLooseCells=
+>     snd $ partitionedLooseCells $ gridLooseCells gridWithRelocatedCells,
+>    gridCells= CellMethods.cellPutCellDiscardingStrays (head $ fst $ partitionedLooseCells $ gridLooseCells gridWithRelocatedCells) $ gridCells gridWithRelocatedCells
+>   }
+>  Nothing -> Nothing
+> where
+>  partitionedLooseCells looseCells =
+>   partition
+>    (\cell -> pointWhereToConnect == CellMethods.cellPoint cell)
+>    looseCells
+>  pointToConnect =
+>   CellMethods.cellPoint cellToConnect
+>  pointWhereToConnect =
+>   CellMethods.cellPoint whereToConnect
+>  gridWithRelocatedCellsMaybe =
+>   gridMoveCellsWithIgnoredPoints grid cellToConnect (pointWhereToConnect - pointToConnect) [pointWhereToConnect]
+
+| Move the Cell in the Grid by the given difference.
+
+>gridMoveCells :: Grid -> Cell.Cell -> Super.Point -> Maybe Grid
+>gridMoveCells grid cell difference =
+> gridMoveCellsWithIgnoredPoints grid cell difference []
+
+>gridMoveCellsWithIgnoredPoints :: Grid -> Cell.Cell -> Super.Point -> [Super.Point] -> Maybe Grid
+>gridMoveCellsWithIgnoredPoints grid cell difference ignoredPoints =
+> if free
+> then Just gridMoveCells'
+> else Nothing
+> where
+>  free = 
+>   any (\filledPoint -> not $ any (filledPoint ==) newPoints) filledPoints
+>  newPoints = map (difference +) $ oldPoints
+>  oldPoints = cellPoints cell
+>  filledPoints = (gridPoints grid) \\ (oldPoints `union` ignoredPoints)
+>  relocations = zip oldPoints newPoints
+>  gridMoveCells' =
+>   grid
+>    {
+>      gridCells=CellMethods.cellPointsRelocation (gridCells grid) relocations,
+>      gridLooseCells=map (\cells ->CellMethods.cellPointsRelocation cells relocations) (gridLooseCells grid)
+>    }
 
 | Insert a blank action before the Cell specified by the Point.
 

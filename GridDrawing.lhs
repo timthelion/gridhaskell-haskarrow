@@ -115,20 +115,38 @@ Now we add an event to draw the lines in our diagram.
 >cellForm :: GridEditorObjects -> DisplayCell.DisplayCell -> IO (Box,Widget)
 
 >cellForm editorObjects dc = do
->       box <- hBoxNew False 0
->       _ <- box `on` keyPressEvent $ do
->        modifier <- eventModifier
->        key <- eventKeyName
->        case (modifier,key) of
->           ([],"Delete") -> do 
->               liftIO $
->                update (gridObject editorObjects)
->                       $ (\grid -> deleteCellGrid (DisplayCell.displayCellPoint dc) grid)
->               return True
->           _     -> return False
+> box <- hBoxNew False 0
+> _ <- box `on` keyPressEvent $ do
+>  modifier <- eventModifier
+>  key <- eventKeyName
+>  case (modifier,key) of
+>   ([],"F8") ->
+>    liftIO $ do
+>     case dc of
+>      DisplayCell.DisplayCellCode cell -> do
+>       updateMulti (gridObject editorObjects) $
+>        finallyUpdate (editModeObject editorObjects)
+>         $ \grid mode ->
+>          if Grid.isTopLevelStray grid cell
+>          then case mode of
+>           FreeMovement -> (Connect cell,grid)
+>           Connect _ -> (FreeMovement,grid)
+>           _ -> (mode,grid)
+>          else
+>           (ShowError "Can only connect top level stray cells." True ,grid);
+>          return True
+>      _ -> return False
 
->       widget <- cellFormFill (toBox box) False editorObjects dc
->       return ((toBox box), widget)
+>   ([],"Delete") -> do 
+>    liftIO $
+>     update (gridObject editorObjects)
+>      $ (\grid ->
+>       deleteCellGrid (DisplayCell.displayCellPoint dc) grid);
+>     return True
+>   _     -> return False
+
+> widget <- cellFormFill (toBox box) False editorObjects dc
+> return ((toBox box), widget)
 
 >cellFormFill :: Box -> Bool -> GridEditorObjects -> DisplayCell.DisplayCell -> IO Widget
 
@@ -383,6 +401,31 @@ If we are on an End, Exit, or Return cell, we should move this cell and make a n
 >       newPoints = map (difference +) oldPoints 
 >       difference = DisplayCell.displayCellPoint dc - (CellMethods.cellPoint cell)
 >     _ -> return (FreeMovement)
+
+>editModeAction editorObjects dc _ (Connect cellWe'reConnecting) = 
+> case dc of
+>  DisplayCell.DisplayCellCode cell ->
+>   case cell of
+>    Cell.End{}    -> connectCell cell
+>    Cell.Exit{}   -> connectCell cell
+>    Cell.Return{} -> connectCell cell
+>    _      -> return connectionError
+>  _ -> return connectionError
+> where
+>  connectCell cell' = do
+>   success <- updateReturning (gridObject editorObjects)
+>    $ \ grid -> 
+>     case Grid.gridConnectCells grid cellWe'reConnecting cell' of
+>      Just grid' -> (grid',True)
+>      Nothing    -> (grid,False)
+>   case success of
+>    True -> return FreeMovement  
+>    False -> return connectionErrorInTheWay
+>  connectionError =
+>   ShowError "Can only connect to End, Exit and Return cells." True
+>  connectionErrorInTheWay =
+>   ShowError "Cannot preform connection there is something in the way." True
+
 
 >editModeAction _ _ _ editMode = error $ "Error. This edit mode hasn't been implimented yet." ++ (show editMode)
 

@@ -30,9 +30,9 @@ gridSetDisplayCellText (DisplayCellComment (point,_)) text grid =
 >gridSetDisplayCellText (DisplayCellCode cell) text grid =
 > let cell'Maybe = (cellPutCode cell text (\point -> gridPointNear grid point)) in
 > case cell'Maybe of
->   Left cell' -> gridPutCellOverwrite cell' grid
+>   Left cell' -> gridPutCell cell' grid
 >   Right (cell',strays)    -> 
 >    updatedCell{gridLooseCells=(gridLooseCells updatedCell)++strays}
->    where updatedCell = (gridPutCellOverwrite cell' grid)
+>    where updatedCell = (gridPutCell cell' grid)
 
 >gridSetDisplayCellText dc _ _ = error $ "Don't know how to set the text of a " ++ (show dc)

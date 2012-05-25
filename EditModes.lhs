@@ -21,5 +21,19 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 >import qualified Cell
 >import qualified Path
 
->data EditMode = AddAction Cell.Cell | AddPattern Cell.Cell | EditPath Path.Path | MoveCell DisplayCell.DisplayCell | MoveCells DisplayCell.DisplayCell | EditCell DisplayCell.DisplayCell | FreeMovement | ShowError String Bool
+
+
+>data EditMode =
+> AddFork Cell.Cell    | 
+> AddPattern Cell.Cell |
+> EditPath Path.Path   |
+> Connect Cell.Cell    |
+> MoveCell DisplayCell.DisplayCell  |
+> MoveCells DisplayCell.DisplayCell |
+> EditCell DisplayCell.DisplayCell  |
+> FreeMovement |
+
+The Bool should be set to True.  It is used internally for showing the error.  We want to showing the error through 1 change in cell focus, but not more.  So the value True tells us that we have yet to change the cell focus :)
+
+> ShowError String Bool
 > deriving (Show)
