@@ -25,6 +25,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 >import qualified Path
 
 >import Data.Maybe
+>import Data.List
+>import Data.Ord
 
 >code :: Grid -> String
 >code grid =
@@ -231,7 +233,8 @@ Functions in the IO monad are handled differently from others.  The last argumen
 
 > where
 
->  patternCodes = map patternCode patterns
+>  patternCodes = map patternCode sortedPatterns
+>  sortedPatterns = sortBy (comparing CellMethods.patternPoint) patterns
 
 >  patternContinuations = 
 >   map (\(Cell.Pattern patternLabel next) ->

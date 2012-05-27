@@ -8,7 +8,7 @@ Grid
   , gridCells = Start
                   { common = CellCommon
                                { rectangle = ( ( -1
-                                               , -2
+                                               , 0
                                                )
                                              , ( 1
                                                , 1
@@ -29,10 +29,10 @@ Grid
                   , code = "main"
                   , arguments = []
                   , pure = False
-                  , next = Action
+                  , next = Lambda
                              { common = CellCommon
                                           { rectangle = ( ( 0
-                                                          , -1
+                                                          , 0
                                                           )
                                                         , ( 1
                                                           , 1
@@ -40,15 +40,20 @@ Grid
                                                         )
                                           , comments = []
                                           }
-                             , code = "getChar"
-                             , return = False
-                             , push = True
+                             , arguments = []
+                             , arrow = ( ( 1
+                                         , 0
+                                         )
+                                       , ( 1
+                                         , 1
+                                         )
+                                       )
+                             , now = True
                              , pull = 0
-                             , label = Nothing
-                             , path = Nothing
-                             , next = Lambda
+                             , pure = False
+                             , body = Action
                                         { common = CellCommon
-                                                     { rectangle = ( ( 0
+                                                     { rectangle = ( ( 2
                                                                      , 0
                                                                      )
                                                                    , ( 1
@@ -57,20 +62,14 @@ Grid
                                                                    )
                                                      , comments = []
                                                      }
-                                        , arguments = []
-                                        , arrow = ( ( 1
-                                                    , 0
-                                                    )
-                                                  , ( 1
-                                                    , 1
-                                                    )
-                                                  )
-                                        , now = True
-                                        , pull = 1
-                                        , pure = False
-                                        , body = Action
+                                        , code = "getChar"
+                                        , return = False
+                                        , push = True
+                                        , pull = 0
+                                        , label = Nothing
+                                        , next = Action
                                                    { common = CellCommon
-                                                                { rectangle = ( ( 2
+                                                                { rectangle = ( ( 3
                                                                                 , 0
                                                                                 )
                                                                               , ( 1
@@ -84,10 +83,9 @@ Grid
                                                    , push = True
                                                    , pull = 0
                                                    , label = Nothing
-                                                   , path = Nothing
                                                    , next = Action
                                                               { common = CellCommon
-                                                                           { rectangle = ( ( 3
+                                                                           { rectangle = ( ( 4
                                                                                            , 0
                                                                                            )
                                                                                          , ( 1
@@ -101,10 +99,9 @@ Grid
                                                               , push = True
                                                               , pull = 2
                                                               , label = Nothing
-                                                              , path = Nothing
                                                               , next = Return
                                                                          { common = CellCommon
-                                                                                      { rectangle = ( ( 4
+                                                                                      { rectangle = ( ( 5
                                                                                                       , 0
                                                                                                       )
                                                                                                     , ( 1
@@ -116,28 +113,45 @@ Grid
                                                                          }
                                                               }
                                                    }
-                                        , next = Which
-                                                   { common = CellCommon
-                                                                { rectangle = ( ( 0
-                                                                                , 4
-                                                                                )
-                                                                              , ( 1
-                                                                                , 1
-                                                                                )
+                                        }
+                             , next = Which
+                                        { common = CellCommon
+                                                     { rectangle = ( ( 0
+                                                                     , 3
+                                                                     )
+                                                                   , ( 1
+                                                                     , 1
+                                                                     )
+                                                                   )
+                                                     , comments = []
+                                                     }
+                                        , patterns = [ Pattern
+                                                         { patternLabel = ( ( ( 2
+                                                                              , 5
                                                                               )
-                                                                , comments = []
-                                                                }
-                                                   , patterns = [ Pattern
-                                                                    { patternLabel = ( ( ( 2
-                                                                                         , 6
-                                                                                         )
-                                                                                       , ( 1
-                                                                                         , 1
-                                                                                         )
-                                                                                       )
-                                                                                     , "True"
-                                                                                     )
-                                                                    , action = Action
+                                                                            , ( 1
+                                                                              , 1
+                                                                              )
+                                                                            )
+                                                                          , "True"
+                                                                          )
+                                                         , action = Action
+                                                                      { common = CellCommon
+                                                                                   { rectangle = ( ( 2
+                                                                                                   , 6
+                                                                                                   )
+                                                                                                 , ( 1
+                                                                                                   , 1
+                                                                                                   )
+                                                                                                 )
+                                                                                   , comments = []
+                                                                                   }
+                                                                      , code = "'n'"
+                                                                      , return = True
+                                                                      , push = True
+                                                                      , pull = 0
+                                                                      , label = Nothing
+                                                                      , next = Action
                                                                                  { common = CellCommon
                                                                                               { rectangle = ( ( 2
                                                                                                               , 7
@@ -148,12 +162,11 @@ Grid
                                                                                                             )
                                                                                               , comments = []
                                                                                               }
-                                                                                 , code = "\"a test.\""
-                                                                                 , return = True
-                                                                                 , push = True
-                                                                                 , pull = 0
+                                                                                 , code = "putChar"
+                                                                                 , return = False
+                                                                                 , push = False
+                                                                                 , pull = 1
                                                                                  , label = Nothing
-                                                                                 , path = Nothing
                                                                                  , next = Action
                                                                                             { common = CellCommon
                                                                                                          { rectangle = ( ( 2
@@ -165,13 +178,12 @@ Grid
                                                                                                                        )
                                                                                                          , comments = []
                                                                                                          }
-                                                                                            , code = "\"This is \""
+                                                                                            , code = "ExitSuccess"
                                                                                             , return = True
                                                                                             , push = True
                                                                                             , pull = 0
                                                                                             , label = Nothing
-                                                                                            , path = Nothing
-                                                                                            , next = Action
+                                                                                            , next = Exit
                                                                                                        { common = CellCommon
                                                                                                                     { rectangle = ( ( 2
                                                                                                                                     , 9
@@ -182,75 +194,42 @@ Grid
                                                                                                                                   )
                                                                                                                     , comments = []
                                                                                                                     }
-                                                                                                       , code = "(++)"
-                                                                                                       , return = True
-                                                                                                       , push = True
-                                                                                                       , pull = 2
-                                                                                                       , label = Nothing
-                                                                                                       , path = Nothing
-                                                                                                       , next = Action
-                                                                                                                  { common = CellCommon
-                                                                                                                               { rectangle = ( ( 2
-                                                                                                                                               , 10
-                                                                                                                                               )
-                                                                                                                                             , ( 1
-                                                                                                                                               , 1
-                                                                                                                                               )
-                                                                                                                                             )
-                                                                                                                               , comments = []
-                                                                                                                               }
-                                                                                                                  , code = "print"
-                                                                                                                  , return = False
-                                                                                                                  , push = False
-                                                                                                                  , pull = 1
-                                                                                                                  , label = Nothing
-                                                                                                                  , path = Nothing
-                                                                                                                  , next = Action
-                                                                                                                             { common = CellCommon
-                                                                                                                                          { rectangle = ( ( 2
-                                                                                                                                                          , 11
-                                                                                                                                                          )
-                                                                                                                                                        , ( 1
-                                                                                                                                                          , 1
-                                                                                                                                                          )
-                                                                                                                                                        )
-                                                                                                                                          , comments = []
-                                                                                                                                          }
-                                                                                                                             , code = "ExitSuccess"
-                                                                                                                             , return = True
-                                                                                                                             , push = True
-                                                                                                                             , pull = 0
-                                                                                                                             , label = Nothing
-                                                                                                                             , path = Nothing
-                                                                                                                             , next = Exit
-                                                                                                                                        { common = CellCommon
-                                                                                                                                                     { rectangle = ( ( 2
-                                                                                                                                                                     , 12
-                                                                                                                                                                     )
-                                                                                                                                                                   , ( 1
-                                                                                                                                                                     , 1
-                                                                                                                                                                     )
-                                                                                                                                                                   )
-                                                                                                                                                     , comments = []
-                                                                                                                                                     }
-                                                                                                                                        }
-                                                                                                                             }
-                                                                                                                  }
                                                                                                        }
                                                                                             }
                                                                                  }
-                                                                    }
-                                                                , Pattern
-                                                                    { patternLabel = ( ( ( -2
-                                                                                         , 6
-                                                                                         )
-                                                                                       , ( 1
-                                                                                         , 1
-                                                                                         )
-                                                                                       )
-                                                                                     , "False"
-                                                                                     )
-                                                                    , action = NewEmptyMVar
+                                                                      }
+                                                         }
+                                                     , Pattern
+                                                         { patternLabel = ( ( ( -2
+                                                                              , 5
+                                                                              )
+                                                                            , ( 1
+                                                                              , 1
+                                                                              )
+                                                                            )
+                                                                          , "False"
+                                                                          )
+                                                         , action = NewEmptyMVar
+                                                                      { common = CellCommon
+                                                                                   { rectangle = ( ( -2
+                                                                                                   , 6
+                                                                                                   )
+                                                                                                 , ( 1
+                                                                                                   , 1
+                                                                                                   )
+                                                                                                 )
+                                                                                   , comments = []
+                                                                                   }
+                                                                      , mvarLabel = ( ( ( -1
+                                                                                        , 6
+                                                                                        )
+                                                                                      , ( 1
+                                                                                        , 1
+                                                                                        )
+                                                                                      )
+                                                                                    , "char"
+                                                                                    )
+                                                                      , next = Fork
                                                                                  { common = CellCommon
                                                                                               { rectangle = ( ( -2
                                                                                                               , 7
@@ -261,27 +240,23 @@ Grid
                                                                                                             )
                                                                                               , comments = []
                                                                                               }
-                                                                                 , mvarLabel = ( ( ( -1
-                                                                                                   , 7
-                                                                                                   )
-                                                                                                 , ( 1
-                                                                                                   , 1
-                                                                                                   )
-                                                                                                 )
-                                                                                               , "char"
-                                                                                               )
-                                                                                 , next = Fork
-                                                                                            { common = CellCommon
-                                                                                                         { rectangle = ( ( -2
-                                                                                                                         , 8
-                                                                                                                         )
-                                                                                                                       , ( 1
-                                                                                                                         , 1
-                                                                                                                         )
-                                                                                                                       )
-                                                                                                         , comments = []
-                                                                                                         }
-                                                                                            , newThreads = [ Action
+                                                                                 , newThreads = [ Action
+                                                                                                    { common = CellCommon
+                                                                                                                 { rectangle = ( ( -4
+                                                                                                                                 , 9
+                                                                                                                                 )
+                                                                                                                               , ( 1
+                                                                                                                                 , 1
+                                                                                                                                 )
+                                                                                                                               )
+                                                                                                                 , comments = []
+                                                                                                                 }
+                                                                                                    , code = "getChar"
+                                                                                                    , return = False
+                                                                                                    , push = False
+                                                                                                    , pull = 1
+                                                                                                    , label = Nothing
+                                                                                                    , next = PutMVar
                                                                                                                { common = CellCommon
                                                                                                                             { rectangle = ( ( -4
                                                                                                                                             , 10
@@ -292,13 +267,16 @@ Grid
                                                                                                                                           )
                                                                                                                             , comments = []
                                                                                                                             }
-                                                                                                               , code = "getChar"
-                                                                                                               , return = False
-                                                                                                               , push = True
-                                                                                                               , pull = 0
-                                                                                                               , label = Nothing
-                                                                                                               , path = Nothing
-                                                                                                               , next = PutMVar
+                                                                                                               , mvarLabel = ( ( ( -3
+                                                                                                                                 , 10
+                                                                                                                                 )
+                                                                                                                               , ( 1
+                                                                                                                                 , 1
+                                                                                                                                 )
+                                                                                                                               )
+                                                                                                                             , "char"
+                                                                                                                             )
+                                                                                                               , next = End
                                                                                                                           { common = CellCommon
                                                                                                                                        { rectangle = ( ( -4
                                                                                                                                                        , 11
@@ -309,30 +287,30 @@ Grid
                                                                                                                                                      )
                                                                                                                                        , comments = []
                                                                                                                                        }
-                                                                                                                          , mvarLabel = ( ( ( -3
-                                                                                                                                            , 11
-                                                                                                                                            )
-                                                                                                                                          , ( 1
-                                                                                                                                            , 1
-                                                                                                                                            )
-                                                                                                                                          )
-                                                                                                                                        , "char"
-                                                                                                                                        )
-                                                                                                                          , next = End
-                                                                                                                                     { common = CellCommon
-                                                                                                                                                  { rectangle = ( ( -4
-                                                                                                                                                                  , 12
-                                                                                                                                                                  )
-                                                                                                                                                                , ( 1
-                                                                                                                                                                  , 1
-                                                                                                                                                                  )
-                                                                                                                                                                )
-                                                                                                                                                  , comments = []
-                                                                                                                                                  }
-                                                                                                                                     }
                                                                                                                           }
                                                                                                                }
-                                                                                                           , TakeMVar
+                                                                                                    }
+                                                                                                , TakeMVar
+                                                                                                    { common = CellCommon
+                                                                                                                 { rectangle = ( ( -1
+                                                                                                                                 , 11
+                                                                                                                                 )
+                                                                                                                               , ( 1
+                                                                                                                                 , 1
+                                                                                                                                 )
+                                                                                                                               )
+                                                                                                                 , comments = []
+                                                                                                                 }
+                                                                                                    , mvarLabel = ( ( ( -2
+                                                                                                                      , 11
+                                                                                                                      )
+                                                                                                                    , ( 1
+                                                                                                                      , 1
+                                                                                                                      )
+                                                                                                                    )
+                                                                                                                  , "char"
+                                                                                                                  )
+                                                                                                    , next = Action
                                                                                                                { common = CellCommon
                                                                                                                             { rectangle = ( ( -1
                                                                                                                                             , 12
@@ -343,15 +321,11 @@ Grid
                                                                                                                                           )
                                                                                                                             , comments = []
                                                                                                                             }
-                                                                                                               , mvarLabel = ( ( ( -2
-                                                                                                                                 , 12
-                                                                                                                                 )
-                                                                                                                               , ( 1
-                                                                                                                                 , 1
-                                                                                                                                 )
-                                                                                                                               )
-                                                                                                                             , "char"
-                                                                                                                             )
+                                                                                                               , code = "putChar"
+                                                                                                               , return = False
+                                                                                                               , push = False
+                                                                                                               , pull = 1
+                                                                                                               , label = Nothing
                                                                                                                , next = Jump
                                                                                                                           { common = CellCommon
                                                                                                                                        { rectangle = ( ( -1
@@ -381,12 +355,12 @@ Grid
                                                                                                                                        }
                                                                                                                           }
                                                                                                                }
-                                                                                                           ]
-                                                                                            }
+                                                                                                    }
+                                                                                                ]
                                                                                  }
-                                                                    }
-                                                                ]
-                                                   }
+                                                                      }
+                                                         }
+                                                     ]
                                         }
                              }
                   }
@@ -415,7 +389,6 @@ Grid
                          , push = True
                          , pull = 0
                          , label = Nothing
-                         , path = Nothing
                          , next = End
                                     { common = CellCommon
                                                  { rectangle = ( ( 3
