@@ -75,7 +75,7 @@ We have to find the widget associated with the focused cell, such that upon redr
 Now we make a list of all the points that appear in our table to actually be drawn on the screen.
 
 >     places <- return (map 
->                 (\p -> Super.subtractPoint p 
+>                 (\p -> p - 
 >                       (grid_minimum_x,grid_minimum_y))
 >          (map DisplayCell.displayCellPoint displayCellsFilled));
 
@@ -149,6 +149,22 @@ Now we add an event to draw the lines in our diagram.
 > return ((toBox box), widget)
 
 >cellFormFill :: Box -> Bool -> GridEditorObjects -> DisplayCell.DisplayCell -> IO Widget
+
+>cellFormFill box edit editorObjects dc@(DisplayCell.DisplayCellCode cell@Cell.Fork{}) = do
+> widget <- cellFormFill' (DisplayCell.displayCellText dc) (toBox box) edit editorObjects dc
+> _ <- widget `on`  keyPressEvent $ do
+>  modifier <- eventModifier
+>  key <- eventKeyName
+>  case (modifier,key) of
+>   ([],"F9") -> do
+>    liftIO $ do
+>     update (gridObject editorObjects)
+>      (\grid ->
+>       Grid.gridAddThread grid cell)
+>    return True
+>   _ -> return False
+> return widget
+
 
 >cellFormFill box edit editorObjects dc@(DisplayCell.DisplayCellCode cell@Cell.Action{}) = do
 >        pure <- buttonNewWithLabel pureText

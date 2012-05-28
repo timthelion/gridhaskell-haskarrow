@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 >module Grid where
 
 >import Data.List
+>import Data.Ord
 
 >import qualified Cell
 >import CellMethods
@@ -191,3 +192,27 @@ Put the cell at the point specified into the grid.
 >    fst (unzip looseCellsPostDelete) ++
 >    (concat $ snd $ unzip looseCellsPostDelete) ++
 >    (snd cellsPostDelete)
+
+>gridAddThread :: Grid -> Cell.Cell -> Grid
+>gridAddThread grid fork =
+> gridPutCell
+>  forkWithNewThread
+>  grid
+> where
+>  forkWithNewThread =
+>   fork{Cell.newThreads = threadsWithNewThread}
+>  threadsWithNewThread =
+>   Cell.End 
+>    (Cell.CellCommon 
+>     (gridPointNear
+>       grid 
+>       $ ((2,0) + (CellMethods.cellPoint $ last $ sortBy (comparing CellMethods.cellPoint) $ Cell.newThreads fork)),
+>      Super.small)
+>     []) :
+>   Cell.newThreads fork
+
+>gridApply :: Grid -> (Cell.Cell->Cell.Cell) -> Grid
+>gridApply grid f =
+> grid{
+>  gridCells = f $ gridCells grid,
+>  gridLooseCells = map f $ gridLooseCells grid}

@@ -238,7 +238,7 @@ And we make a new one...
 >         MoveCells{}   -> "Move cells mode | Shfit-F6/Esc Exit Mode | Enter Place Cells"
 >         EditCell{}   -> "Cell edit mode | Esc Exit Mode"
 >         Connect{}    -> "Connect cell mode | Esc Exit Mode | Enter connect cell"
->         FreeMovement -> "Navigation mode | F6 MoveCell | Shift-F6 MoveCells | F7 insert cell | F8 Connect cell"
+>         FreeMovement -> "Navigation mode | F6 MoveCell | Shift-F6 MoveCells | F7 insert cell | F8 Connect cell | F9 add Fork/Pattern"
 >         ShowError errorMessage _ -> errorMessage)]
 
 >     return ()

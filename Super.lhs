@@ -36,9 +36,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 >type Rectangle = (Point, Size)
 
->subtractPoint :: Point -> Point -> Point
->subtractPoint a b = ((fst a) - (fst b),(snd a) - (snd b))
-
 Here we have the version of the whole grid haskell project.
 
 >version :: Float
