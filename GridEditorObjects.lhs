@@ -61,4 +61,5 @@ This is a special file saving object.  Put a string in it, and it will get saved
 > focusedCellRecords :: StateRecords (Maybe DisplayCell.DisplayCell) (),
 
 > focusedRectangleRecords :: StateRecords Rectangle ()
+
 >}

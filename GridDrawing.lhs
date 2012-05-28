@@ -17,12 +17,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 >module GridDrawing (drawGrid) where
 
+>import Control.Concurrent
 >import Graphics.UI.Gtk
 >import Control.Monad.IO.Class
 
 >import Grid
 >import GridExtremes
->import qualified Super
 >import qualified DisplayCell
 >import qualified Cell
 >import qualified CellMethods
@@ -89,7 +89,26 @@ Now we add an event to draw the lines in our diagram.
 >       (\_ -> do drawWin <- widgetGetDrawWindow table
 >                 allocations <- (mapM widgetGetAllocation (map fst cellForms))
 >                 renderWithDrawable drawWin (drawArrows (zip allocations displayCellsFilled))
->                 liftIO $ do {
+
+>                 _<-forkIO $ do {
+
+>                  mode <- getObjectValue (editModeObject editorObjects);
+
+
+>                  entryRectMaybe <- (case mode of
+>                    EditCell _ widget -> 
+>                     do
+
+>                      allocation <- postGUISync (widgetGetAllocation widget)
+                      
+                      allocation <- return (Rectangle 0 0 0 0)
+
+>                      return $ Just allocation
+                      
+                      return Nothing
+
+
+>                    _ -> return Nothing);
 >                  updateMulti
 >                   (reFocusNeededObject editorObjects) $
 >                  finallyUpdate
@@ -97,7 +116,10 @@ Now we add an event to draw the lines in our diagram.
 >                     (\reFocus rect->
 >                       if reFocus
 >                       then (oldRectangle,False)
->                       else (rect,False));};
+>                       else 
+>                        case entryRectMaybe of
+>                         Just entryRect -> (entryRect,False);
+>                         Nothing -> (rect,False);)};
 >                 return False);
 
 >     return focusedWidgetMaybe;
@@ -294,14 +316,14 @@ Not pure
 >         else set enter [buttonRelief := ReliefNone]
 >         boxPackStart box enter PackGrow 0
 
-         enter `on` buttonPressEvent $ liftIO $ do{
-             updateIO
-               (editModeObject editorObjects)
-                (editModeAction editorObjects dc box);
-             return False;}
+>         _ <- enter `on` buttonActivated $ liftIO $ do{
+>             updateIONoBlock
+>               (editModeObject editorObjects)
+>                (\mode ->
+>                  do
+>                   editModeAction editorObjects dc box mode;);
+>             }
     
->         _ <- onClicked enter (do {updateIONoBlock (editModeObject editorObjects) (editModeAction editorObjects dc box)})
-
 >         _ <- enter `on` focusOutEvent $ do 
 >             { liftIO $ do
 >            update (editModeObject editorObjects)
@@ -359,40 +381,49 @@ Not pure
 If we are in FreeMovement mode we make a text entry and enter EditCell mode.
 
 >editModeAction editorObjects dc vbox FreeMovement = do
->   postGUISync (do {
  
 If we are on an End, Exit, or Return cell, we should move this cell and make a new one to edit.
 
 >     let addCell common = do {
 >      updateReturning
 >       (gridObject editorObjects)
->         (\grid -> gridInsertBlankAction grid (CellMethods.commonPoint common))} in do
+>         (\grid -> gridInsertBlankAction grid (CellMethods.commonPoint common))} in do{
 
->   maybeNewDisplayCell <- (case dc of
->      DisplayCell.DisplayCellCode (Cell.Exit common) -> do 
->         mCell <- (addCell common)
->         return $ case mCell of {Nothing -> Nothing ; Just cell -> Just $ DisplayCell.DisplayCellCode cell} 
->      DisplayCell.DisplayCellCode (Cell.End common) -> do 
->         mCell <- (addCell common)
->         return $ case mCell of {Nothing -> Nothing ; Just cell -> Just $ DisplayCell.DisplayCellCode cell} 
+>   (success,enterEditMode) <- (case dc of
+>      DisplayCell.DisplayCellCode (Cell.Exit common) -> do
+>         mCell <- addCell common
+>         return $ case mCell of
+>          Just _ -> (True,False)
+>          Nothing -> (False,False)
+>      DisplayCell.DisplayCellCode (Cell.End common) -> do
+>         mCell <- addCell common
+>         return $ case mCell of
+>          Just _ -> (True,False)
+>          Nothing -> (False,False)
 >      DisplayCell.DisplayCellCode (Cell.Return common) -> do 
->         mCell <- (addCell common)
->         return $ case mCell of {Nothing -> Nothing ; Just cell -> Just $ DisplayCell.DisplayCellCode cell}
->      DisplayCell.DisplayCellBlank {} -> return Nothing
->      _  -> return $ Just dc);
+>         mCell <- addCell common
+>         return $ case mCell of
+>          Just _ -> (True,False)
+>          Nothing -> (False,False)
+>      DisplayCell.DisplayCellBlank {} -> return (True,False)
+>      _  -> return (True,True));
 
->   case maybeNewDisplayCell of
->    Nothing -> (return (ShowError "Cannot add a new Cell, there is something in the way." True))
->    Just newDC -> do
+>   case success of
+>    False -> do
+>     return (ShowError "Cannot add a new Cell, there is something in the way." True)
+>    True -> do
+>     if enterEditMode
+>     then( do
+>     _ <- forkIO $ postGUISync (do {
 >     containerForeach vbox (containerRemove vbox);
+>     _ <- cellFormFill vbox True editorObjects dc;
+>     widgetShowAll vbox;});
 
-     print "filling with entry box";
+>     vboxWidget <- return $ toWidget vbox;
+>     return (EditCell dc vboxWidget))
+>     else do
+>     return FreeMovement;}
 
->     _ <- cellFormFill vbox True editorObjects newDC; 
->     widgetShowAll vbox;
->     return (EditCell newDC);
->   })
-  
 
 >editModeAction editorObjects dc _ (MoveCell cellWe'reMoving) = 
 >   case cellWe'reMoving of

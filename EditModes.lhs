@@ -17,11 +17,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 >module EditModes where
 
+>import Graphics.UI.Gtk
 >import qualified DisplayCell
 >import qualified Cell
 >import qualified Path
 
-
+>instance Show Widget where
+>    show _ = " *GTK Widget* "
 
 >data EditMode =
 > AddFork Cell.Cell    | 
@@ -30,7 +32,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 > Connect Cell.Cell    |
 > MoveCell DisplayCell.DisplayCell  |
 > MoveCells DisplayCell.DisplayCell |
-> EditCell DisplayCell.DisplayCell  |
+> EditCell DisplayCell.DisplayCell Widget |
 > FreeMovement |
 
 The Bool should be set to True.  It is used internally for showing the error.  We want to showing the error through 1 change in cell focus, but not more.  So the value True tells us that we have yet to change the cell focus :)
